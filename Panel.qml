@@ -249,7 +249,7 @@ Panel {
     open: root.opened
     centerOnBar: true
     focusTarget: keyCatcher
-    contentWidth: panel.fittedContentWidth(Style.space(1220))
+    contentWidth: panel.fittedContentWidth(Style.space(1270))
     contentHeight: panel.fittedContentHeight(Math.max(mediaHub.implicitHeight, calendarColumn.implicitHeight, agentsHub.implicitHeight))
 
     PanelKeyCatcher {

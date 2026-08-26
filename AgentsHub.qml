@@ -23,21 +23,26 @@ Item {
   readonly property var balance: provider ? (provider.balance || null) : null
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property color urgent: bar ? bar.urgent : Color.urgent
+  readonly property color track: Style.selectedFillFor(foreground, Color.accent)
   readonly property bool alarming: agentsWidget ? agentsWidget.alarming : false
 
-  implicitWidth: Style.space(330)
+  implicitWidth: Style.space(380)
   implicitHeight: Style.space(560)
 
   function clamp(value, low, high) {
     return Math.max(low, Math.min(high, value))
   }
 
+  function alpha(color, opacity) {
+    return Qt.rgba(color.r, color.g, color.b, opacity)
+  }
+
   function formatTokenCount(value) {
-    var amount = Math.max(0, Number(value) || 0)
-    if (amount >= 1000000000) return (amount / 1000000000).toFixed(amount >= 10000000000 ? 0 : 1) + "B"
-    if (amount >= 1000000) return (amount / 1000000).toFixed(amount >= 10000000 ? 0 : 1) + "M"
-    if (amount >= 1000) return (amount / 1000).toFixed(amount >= 10000 ? 0 : 1) + "K"
-    return String(Math.round(amount))
+    if (value === undefined || value === null) return "0"
+    if (value >= 1e9) return (value / 1e9).toFixed(1) + "B"
+    if (value >= 1e6) return (value / 1e6).toFixed(1) + "M"
+    if (value >= 1e3) return (value / 1e3).toFixed(1) + "K"
+    return String(value)
   }
 
   function providerMeta() {
@@ -103,9 +108,34 @@ Item {
     return peak
   }
 
-  function dayLabel(date) {
+  function todayDate() {
+    var now = new Date()
+    return now.getFullYear()
+      + "-" + String(now.getMonth() + 1).padStart(2, "0")
+      + "-" + String(now.getDate()).padStart(2, "0")
+  }
+
+  function dayName(date) {
     var parsed = new Date(String(date || "") + "T00:00:00")
-    return isNaN(parsed.getTime()) ? "" : ["S", "M", "T", "W", "T", "F", "S"][parsed.getDay()]
+    if (isNaN(parsed.getTime())) return String(date || "")
+    return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][parsed.getDay()]
+  }
+
+  function dayLabel(date, today) {
+    return today ? "Today" : dayName(date)
+  }
+
+  function dayTooltip(day, today) {
+    if (!day) return ""
+    var parsed = new Date(String(day.date) + "T00:00:00")
+    var label = isNaN(parsed.getTime())
+      ? String(day.date)
+      : dayName(day.date) + " " + (parsed.getMonth() + 1) + "/" + parsed.getDate()
+    var text = label + " · " + formatTokenCount(Number(day.messageCount || 0)) + " tokens"
+    if (today && provider && provider.hasPromptStats !== false)
+      text += " · " + Number(provider.todayPrompts || 0) + " prompts · "
+        + Number(provider.todaySessions || 0) + " sessions"
+    return text
   }
 
   function modelRows() {
@@ -500,56 +530,31 @@ Item {
       }
 
       Column {
-        visible: root.provider !== null && (root.provider.recentDays || []).length > 0
+        id: usageSection
+        visible: root.provider !== null && root.provider.recentDays && root.provider.recentDays.length > 0
         width: parent.width
-        spacing: Style.space(8)
+        spacing: Style.spacing.md
 
-        Text {
-          text: "LAST 7 DAYS"
-          color: root.dim
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.caption
-          font.bold: true
-          font.letterSpacing: 1
+        readonly property var days: root.provider ? (root.provider.recentDays || []) : []
+        readonly property real peak: Math.max(1, root.recentPeak())
+
+        PanelSectionHeader {
+          width: parent.width
+          text: "TOKENS BY DAY"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
         }
 
-        Row {
-          id: dayChart
-          width: parent.width
-          height: Style.space(78)
-          spacing: Style.space(5)
+        Repeater {
+          model: usageSection.days
 
-          Repeater {
-            model: root.provider ? (root.provider.recentDays || []) : []
-
-            Item {
-              required property var modelData
-              width: (dayChart.width - dayChart.spacing * 6) / 7
-              height: dayChart.height
-
-              Rectangle {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: dayName.top
-                anchors.bottomMargin: Style.space(4)
-                height: Math.max(Style.space(3), (parent.height - dayName.height - Style.space(8))
-                  * Number(modelData.messageCount || 0) / Math.max(1, root.recentPeak()))
-                radius: Style.cornerRadius
-                color: Style.selectedStateColor(root.foreground, Color.accent)
-                opacity: 0.35 + 0.65 * Number(modelData.messageCount || 0) / Math.max(1, root.recentPeak())
-              }
-
-              Text {
-                id: dayName
-                anchors.bottom: parent.bottom
-                width: parent.width
-                text: root.dayLabel(modelData.date)
-                color: root.dim
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-                horizontalAlignment: Text.AlignHCenter
-              }
-            }
+          DayRow {
+            required property var modelData
+            required property int index
+            width: usageSection.width
+            day: modelData
+            ratio: Number(modelData.messageCount || 0) / usageSection.peak
+            today: String(modelData.date || "") === root.todayDate()
           }
         }
       }
@@ -596,6 +601,80 @@ Item {
           }
         }
       }
+    }
+  }
+
+  // Kept structurally identical to omarchy.agents so daily usage reads the
+  // same here and in the stock panel.
+  component DayRow: Item {
+    id: dayRow
+    property var day: null
+    property real ratio: 0
+    property bool today: false
+
+    implicitHeight: Math.max(dayLabel.implicitHeight, dayValue.implicitHeight) + Style.spacing.sm
+
+    Text {
+      id: dayLabel
+      text: root.dayLabel(dayRow.day ? dayRow.day.date : "", dayRow.today)
+      color: dayRow.today ? root.foreground : root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+      font.bold: dayRow.today
+      anchors.left: parent.left
+      anchors.verticalCenter: parent.verticalCenter
+      width: Style.space(52)
+    }
+
+    Rectangle {
+      id: dayTrack
+      anchors.left: dayLabel.right
+      anchors.right: dayValue.left
+      anchors.leftMargin: Style.space(8)
+      anchors.rightMargin: Style.space(10)
+      anchors.verticalCenter: parent.verticalCenter
+      height: Math.max(Style.space(4), Math.round(Style.spacing.controlHeight * 0.14))
+      radius: height / 2
+      color: root.track
+
+      Rectangle {
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        height: parent.height
+        radius: parent.radius
+        width: parent.width * root.clamp(dayRow.ratio, 0, 1)
+        color: dayRow.today ? root.foreground : root.alpha(root.foreground, 0.55)
+
+        Behavior on width {
+          NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+        }
+      }
+    }
+
+    Text {
+      id: dayValue
+      text: root.formatTokenCount(dayRow.day ? Number(dayRow.day.messageCount || 0) : 0)
+      color: dayRow.today ? root.foreground : root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+      font.bold: true
+      horizontalAlignment: Text.AlignRight
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      width: Style.space(52)
+    }
+
+    MouseArea {
+      id: dayHover
+      anchors.fill: parent
+      hoverEnabled: true
+      acceptedButtons: Qt.NoButton
+    }
+
+    PanelToolTip {
+      visible: dayHover.containsMouse
+      text: root.dayTooltip(dayRow.day, dayRow.today)
+      fontFamily: root.fontFamily
     }
   }
 }
