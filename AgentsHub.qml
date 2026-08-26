@@ -17,8 +17,8 @@ Item {
   signal closeRequested()
 
   readonly property var providers: agentsWidget ? agentsWidget.providers : []
+  readonly property var orderedProviders: orderedProviderList(providers)
   readonly property var provider: agentsWidget ? agentsWidget.provider : null
-  readonly property int providerIndex: agentsWidget ? agentsWidget.providerIndex : 0
   readonly property var limits: agentsWidget ? agentsWidget.limits : []
   readonly property var balance: provider ? (provider.balance || null) : null
   readonly property color dim: Qt.darker(foreground, 1.55)
@@ -153,8 +153,46 @@ Item {
     return rows.slice(0, 4)
   }
 
-  function selectProvider(index) {
-    if (agentsWidget) agentsWidget.selectProvider(index)
+  function orderedProviderList(source) {
+    var ordered = []
+    var priorities = ["codex", "claude"]
+
+    for (var p = 0; p < priorities.length; p++) {
+      for (var i = 0; i < source.length; i++) {
+        if (String(source[i].providerId || "").toLowerCase() === priorities[p])
+          ordered.push(source[i])
+      }
+    }
+
+    for (var j = 0; j < source.length; j++) {
+      var id = String(source[j].providerId || "").toLowerCase()
+      if (priorities.indexOf(id) < 0) ordered.push(source[j])
+    }
+
+    return ordered
+  }
+
+  function selectProvider(item) {
+    if (!agentsWidget || !item) return
+    var targetId = String(item.providerId || "")
+    for (var i = 0; i < providers.length; i++) {
+      if (String(providers[i].providerId || "") === targetId) {
+        agentsWidget.selectProvider(i)
+        return
+      }
+    }
+  }
+
+  function selectMainProvider() {
+    if (!agentsWidget || providers.length === 0) return
+    if (String(agentsWidget.selectedProviderId || "") !== "") return
+
+    for (var i = 0; i < providers.length; i++) {
+      if (String(providers[i].providerId || "").toLowerCase() === "codex") {
+        agentsWidget.selectProvider(i)
+        return
+      }
+    }
   }
 
   function refresh() {
@@ -166,6 +204,8 @@ Item {
     root.closeRequested()
   }
 
+  onAgentsWidgetChanged: selectMainProvider()
+  onProvidersChanged: selectMainProvider()
   onPanelOpenChanged: if (panelOpen) agentScroll.contentY = 0
 
   Flickable {
@@ -242,25 +282,25 @@ Item {
         width: parent.width
         spacing: Style.space(6)
 
-        readonly property real cellWidth: root.providers.length > 0
-          ? (width - spacing * (root.providers.length - 1)) / root.providers.length
+        readonly property real cellWidth: root.orderedProviders.length > 0
+          ? (width - spacing * (root.orderedProviders.length - 1)) / root.orderedProviders.length
           : 0
 
         Repeater {
-          model: root.providers
+          model: root.orderedProviders
 
           Button {
             required property var modelData
-            required property int index
             width: providerSwitch.cellWidth
             text: modelData.providerName
-            selected: index === root.providerIndex
+            selected: root.provider !== null
+              && String(modelData.providerId || "") === String(root.provider.providerId || "")
             bordered: true
             foreground: root.foreground
             fontFamily: root.fontFamily
             fontSize: Style.font.caption
             horizontalPadding: Style.space(5)
-            onClicked: root.selectProvider(index)
+            onClicked: root.selectProvider(modelData)
           }
         }
       }
