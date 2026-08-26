@@ -217,19 +217,6 @@ Item {
     boundsBehavior: Flickable.StopAtBounds
     flickableDirection: Flickable.VerticalFlick
     interactive: contentHeight > height
-    ScrollBar.vertical: ScrollBar {
-      id: agentScrollBar
-      policy: ScrollBar.AsNeeded
-      background: Item { }
-      contentItem: Rectangle {
-        implicitWidth: Style.space(3)
-        radius: width / 2
-        color: root.foreground
-        opacity: agentScrollBar.pressed ? 0.55 : (agentScrollBar.hovered ? 0.35 : 0.16)
-
-        Behavior on opacity { NumberAnimation { duration: 120 } }
-      }
-    }
 
     Column {
       id: agentColumn
