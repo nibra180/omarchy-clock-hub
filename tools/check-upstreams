@@ -1,0 +1,246 @@
+#!/bin/bash
+
+# Detect upstream changes without overwriting the customized clock hub.
+set -uo pipefail
+
+PLUGIN_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+LOCK_FILE="$PLUGIN_DIR/UPSTREAMS.json"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/nibra-clock-upstreams"
+BASELINE_DIR="$STATE_DIR/baseline"
+REPORTS_DIR="$STATE_DIR/reports"
+RUIXEN_MIRROR="$STATE_DIR/ruixen.git"
+RUIXEN_REPO="https://github.com/gitcoder89431/ruixen-shell.git"
+
+SOURCE_NAMES=(clock media agents)
+declare -A SOURCE_PATHS=(
+  [clock]="/usr/share/omarchy/shell/plugins/panels/clock"
+  [media]="/usr/share/omarchy/shell/plugins/services/media"
+  [agents]="/usr/share/omarchy/shell/plugins/agents"
+)
+
+mode="check"
+notify=0
+for arg in "$@"; do
+  case "$arg" in
+    --init) mode="init" ;;
+    --accept) mode="accept" ;;
+    --notify) notify=1 ;;
+    -h|--help)
+      cat <<'USAGE'
+Usage: check-upstreams [--init|--accept] [--notify]
+
+Without options, compare reviewed upstream snapshots with the currently
+installed Omarchy sources and Ruixen's remote HEAD.
+
+  --init    Create the first reviewed baseline if none exists
+  --accept  Mark the currently installed/remote upstream versions as reviewed
+  --notify  Send a desktop notification when changes are found
+USAGE
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $arg" >&2
+      exit 1
+      ;;
+  esac
+done
+
+mkdir -p "$STATE_DIR" "$REPORTS_DIR"
+
+omarchy_version() {
+  omarchy version 2>/dev/null || pacman -Q omarchy 2>/dev/null | awk '{print $2}' || echo unknown
+}
+
+tree_hash() {
+  local dir="$1"
+  if [[ ! -d $dir ]]; then
+    echo missing
+    return
+  fi
+  (
+    cd "$dir" || exit 1
+    find . -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}'
+  )
+}
+
+ruixen_remote_commit() {
+  git ls-remote "$RUIXEN_REPO" HEAD 2>/dev/null | awk 'NR == 1 {print $1}'
+}
+
+update_ruixen_mirror() {
+  if [[ -d $RUIXEN_MIRROR ]]; then
+    git --git-dir="$RUIXEN_MIRROR" remote update --prune >/dev/null 2>&1
+  else
+    git clone --mirror --quiet "$RUIXEN_REPO" "$RUIXEN_MIRROR" >/dev/null 2>&1
+  fi
+}
+
+write_lock() {
+  local ruixen_commit="$1"
+  local reviewed_at version clock_hash media_hash agents_hash tmp
+  reviewed_at=$(date --iso-8601=seconds)
+  version=$(omarchy_version)
+  clock_hash=$(tree_hash "${SOURCE_PATHS[clock]}")
+  media_hash=$(tree_hash "${SOURCE_PATHS[media]}")
+  agents_hash=$(tree_hash "${SOURCE_PATHS[agents]}")
+  tmp="$LOCK_FILE.tmp"
+
+  jq -n \
+    --arg reviewedAt "$reviewed_at" \
+    --arg omarchyVersion "$version" \
+    --arg clockHash "$clock_hash" \
+    --arg mediaHash "$media_hash" \
+    --arg agentsHash "$agents_hash" \
+    --arg ruixenRepository "$RUIXEN_REPO" \
+    --arg ruixenCommit "$ruixen_commit" \
+    '{
+      schemaVersion: 1,
+      reviewedAt: $reviewedAt,
+      omarchy: {
+        version: $omarchyVersion,
+        sources: {
+          clock: {path: "/usr/share/omarchy/shell/plugins/panels/clock", treeHash: $clockHash},
+          media: {path: "/usr/share/omarchy/shell/plugins/services/media", treeHash: $mediaHash},
+          agents: {path: "/usr/share/omarchy/shell/plugins/agents", treeHash: $agentsHash}
+        }
+      },
+      ruixen: {
+        repository: $ruixenRepository,
+        commit: $ruixenCommit,
+        watchedPaths: ["ruixen.media", "ruixen.notch"]
+      }
+    }' >"$tmp" && mv "$tmp" "$LOCK_FILE"
+}
+
+snapshot_omarchy() {
+  local next="$STATE_DIR/.baseline.$$"
+  rm -rf "$next"
+  mkdir -p "$next"
+
+  local name source
+  for name in "${SOURCE_NAMES[@]}"; do
+    source=${SOURCE_PATHS[$name]}
+    if [[ ! -d $source ]]; then
+      echo "Missing Omarchy source: $source" >&2
+      rm -rf "$next"
+      return 1
+    fi
+    mkdir -p "$next/$name"
+    cp -aL "$source/." "$next/$name/"
+  done
+
+  rm -rf "$BASELINE_DIR.old"
+  [[ ! -d $BASELINE_DIR ]] || mv "$BASELINE_DIR" "$BASELINE_DIR.old"
+  mv "$next" "$BASELINE_DIR"
+  rm -rf "$BASELINE_DIR.old"
+}
+
+accept_baseline() {
+  local remote_commit current_commit
+  current_commit=""
+  [[ ! -f $LOCK_FILE ]] || current_commit=$(jq -r '.ruixen.commit // ""' "$LOCK_FILE")
+  remote_commit=$(ruixen_remote_commit)
+  [[ -n $remote_commit ]] || remote_commit="$current_commit"
+
+  snapshot_omarchy || return 1
+  if [[ -n $remote_commit ]]; then
+    update_ruixen_mirror || echo "Warning: Ruixen mirror could not be refreshed" >&2
+  fi
+  write_lock "$remote_commit"
+  echo "Accepted upstream baseline: Omarchy $(omarchy_version), Ruixen ${remote_commit:-unavailable}"
+}
+
+if [[ $mode == init ]]; then
+  if [[ -f $LOCK_FILE && -d $BASELINE_DIR ]]; then
+    echo "Upstream baseline already exists. Use --accept to replace it."
+  else
+    accept_baseline
+  fi
+  exit $?
+fi
+
+if [[ $mode == accept ]]; then
+  accept_baseline
+  exit $?
+fi
+
+if [[ ! -f $LOCK_FILE || ! -d $BASELINE_DIR ]]; then
+  echo "No upstream baseline found; creating it now."
+  accept_baseline
+  exit $?
+fi
+
+reviewed_version=$(jq -r '.omarchy.version // "unknown"' "$LOCK_FILE")
+installed_version=$(omarchy_version)
+reviewed_ruixen=$(jq -r '.ruixen.commit // ""' "$LOCK_FILE")
+current_ruixen=$(ruixen_remote_commit)
+
+changed_sources=()
+for name in "${SOURCE_NAMES[@]}"; do
+  if [[ ! -d ${SOURCE_PATHS[$name]} ]] || ! diff -qr "$BASELINE_DIR/$name" "${SOURCE_PATHS[$name]}" >/dev/null 2>&1; then
+    changed_sources+=("$name")
+  fi
+done
+
+version_changed=0
+[[ $reviewed_version == "$installed_version" ]] || version_changed=1
+ruixen_changed=0
+[[ -z $current_ruixen || $current_ruixen == "$reviewed_ruixen" ]] || ruixen_changed=1
+
+if (( ${#changed_sources[@]} == 0 && version_changed == 0 && ruixen_changed == 0 )); then
+  echo "Upstreams unchanged: Omarchy $installed_version, Ruixen ${reviewed_ruixen:-unavailable}"
+  exit 0
+fi
+
+stamp=$(date +%Y%m%d-%H%M%S)
+report_dir="$REPORTS_DIR/$stamp"
+mkdir -p "$report_dir"
+summary="$report_dir/summary.txt"
+
+{
+  echo "nibra.clock upstream report"
+  echo "Generated: $(date --iso-8601=seconds)"
+  echo
+  echo "Omarchy reviewed:  $reviewed_version"
+  echo "Omarchy installed: $installed_version"
+  if (( ${#changed_sources[@]} > 0 )); then
+    echo "Changed sources:   ${changed_sources[*]}"
+  else
+    echo "Changed sources:   none"
+  fi
+  echo
+  echo "Ruixen reviewed:   ${reviewed_ruixen:-unavailable}"
+  echo "Ruixen remote:     ${current_ruixen:-unavailable (network error)}"
+  if (( ruixen_changed )); then
+    echo "Ruixen compare:    https://github.com/gitcoder89431/ruixen-shell/compare/${reviewed_ruixen}...${current_ruixen}"
+  fi
+  echo
+  echo "No files were changed automatically. Review the diffs, adapt the plugin,"
+  echo "then run: $PLUGIN_DIR/tools/check-upstreams --accept"
+} >"$summary"
+
+for name in "${changed_sources[@]}"; do
+  diff -ruN "$BASELINE_DIR/$name" "${SOURCE_PATHS[$name]}" >"$report_dir/omarchy-$name.diff" || true
+done
+
+if (( ruixen_changed )); then
+  if update_ruixen_mirror; then
+    git --git-dir="$RUIXEN_MIRROR" diff "$reviewed_ruixen" "$current_ruixen" -- ruixen.media ruixen.notch \
+      >"$report_dir/ruixen.diff" 2>/dev/null || true
+  else
+    echo "Ruixen mirror unavailable; use the compare URL in summary.txt." >"$report_dir/ruixen.diff"
+  fi
+fi
+
+cat "$summary"
+echo
+echo "Report: $report_dir"
+
+if (( notify )) && command -v notify-send >/dev/null 2>&1; then
+  notify-send --app-name="Omarchy" \
+    "Clock Hub: upstream changes" \
+    "Review $(basename "$report_dir") before accepting the new baseline."
+fi
+
+# A post-update hook must never make the system update fail.
+exit 0

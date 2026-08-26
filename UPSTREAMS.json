@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-08-26T11:34:40+02:00",
+  "omarchy": {
+    "version": "4.0.1-1",
+    "sources": {
+      "clock": {
+        "path": "/usr/share/omarchy/shell/plugins/panels/clock",
+        "treeHash": "21a3cdc7a6601c3f6f38618cf98d5304fbc81a4a33505ee76a5507e6e1905a74"
+      },
+      "media": {
+        "path": "/usr/share/omarchy/shell/plugins/services/media",
+        "treeHash": "f96be26ec466e7242995e24199c472d1285c6e779fc7037076419947cbe893f9"
+      },
+      "agents": {
+        "path": "/usr/share/omarchy/shell/plugins/agents",
+        "treeHash": "74c51c87686a2621184702e66e81f34072e469ee86f3b2f7905b485d07ad324e"
+      }
+    }
+  },
+  "ruixen": {
+    "repository": "https://github.com/gitcoder89431/ruixen-shell.git",
+    "commit": "a132d39bbb598c1d1b9ad5e089febfd716d75d06",
+    "watchedPaths": [
+      "ruixen.media",
+      "ruixen.notch"
+    ]
+  }
+}
