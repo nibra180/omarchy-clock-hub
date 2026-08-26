@@ -250,7 +250,10 @@ Panel {
     centerOnBar: true
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(1270))
-    contentHeight: panel.fittedContentHeight(Math.max(mediaHub.implicitHeight, calendarColumn.implicitHeight, agentsHub.implicitHeight))
+    contentHeight: panel.fittedContentHeight(
+      Math.max(mediaHub.implicitHeight, calendarColumn.implicitHeight, agentsHub.implicitHeight)
+        + Style.space(18) + systemStatus.implicitHeight
+    )
 
     PanelKeyCatcher {
       id: keyCatcher
@@ -272,10 +275,16 @@ Panel {
         else if (t === "w" || t === "W") root.toggleWeekStart()
       }
 
-      Row {
-        id: hubRow
+      Column {
+        id: hubColumn
         anchors.fill: parent
         spacing: Style.space(18)
+
+        Row {
+          id: hubRow
+          width: parent.width
+          height: Math.max(0, parent.height - systemStatus.implicitHeight - hubColumn.spacing)
+          spacing: Style.space(18)
 
         MediaHub {
           id: mediaHub
@@ -300,13 +309,14 @@ Panel {
           width: Math.max(0, hubRow.width - mediaHub.width - agentsHub.width - Style.spacing.hairline * 2 - hubRow.spacing * 4)
           height: hubRow.height
           contentWidth: calendarColumn.width
-        contentHeight: calendarColumn.implicitHeight
-        clip: true
+          contentHeight: Math.max(height, calendarColumn.implicitHeight)
+          clip: true
         boundsBehavior: Flickable.StopAtBounds
         interactive: contentHeight > height || contentWidth > width
 
         Column {
           id: calendarColumn
+          y: Math.max(0, (calendarScroll.height - implicitHeight) / 2)
           // Never narrower than the grid. The popup width is capped to what
           // the screen allows, and a fixed seven-column grid would otherwise
           // lose its last days off the edge instead of scrolling.
@@ -787,16 +797,25 @@ Panel {
           opacity: 0.12
         }
 
-        AgentsHub {
-          id: agentsHub
-          width: implicitWidth
-          height: parent.height
-          bar: root.bar
-          agentsWidget: root.agentsWidget
-          panelOpen: root.opened
+          AgentsHub {
+            id: agentsHub
+            width: implicitWidth
+            height: parent.height
+            bar: root.bar
+            agentsWidget: root.agentsWidget
+            panelOpen: root.opened
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onCloseRequested: root.close()
+          }
+        }
+
+        SystemStatus {
+          id: systemStatus
+          width: parent.width
+          running: root.opened
           foreground: root.contentForeground
           fontFamily: root.contentFontFamily
-          onCloseRequested: root.close()
         }
       }
     }

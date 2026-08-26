@@ -56,6 +56,7 @@ Item {
 
   Column {
     id: mediaColumn
+    anchors.verticalCenter: parent.verticalCenter
     width: parent.width
     spacing: Style.space(10)
 

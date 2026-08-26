@@ -10,6 +10,7 @@ a compact desktop hub.
 - Full Omarchy calendar with week numbers and month navigation
 - MPRIS media card with artwork, progress, and playback controls
 - Omarchy Agents dashboard with provider limits, daily usage, and model totals
+- Live CPU, memory, and root-disk status across the bottom of the hub
 - Automatic upstream change detection after `omarchy update`
 
 The hub reuses Omarchy's running `omarchy.media` service and the live
@@ -20,6 +21,7 @@ The hub reuses Omarchy's running `omarchy.media` service and the live
 - Omarchy 4.0 or newer
 - The stock `omarchy.media` service
 - `omarchy.agents` in the bar for the Agents dashboard
+- `bash`, `awk`, `df`, and the Linux `/proc` filesystem for system status
 
 ## Installation
 
@@ -67,7 +69,7 @@ It only reports upstream changes. It never overwrites local QML. See
 ## Development
 
 ```bash
-qmllint -I /usr/share/omarchy/shell AgentsHub.qml MediaHub.qml Panel.qml VinylIndicator.qml
+qmllint -I /usr/share/omarchy/shell AgentsHub.qml MediaHub.qml Panel.qml SystemStatus.qml VinylIndicator.qml
 omarchy plugin validate ~/.config/omarchy/plugins/io.github.nibra180.clock-hub
 omarchy restart shell
 ```
@@ -77,5 +79,5 @@ Plugin files hot-reload while editing. Keep personal settings in
 
 ## License
 
-MIT. This project is derived from Omarchy and was inspired by Ruixen Shell.
+MIT. This project contains code derived from Omarchy and Asked Dashboard, and was inspired by Ruixen Shell.
 See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

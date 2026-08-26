@@ -212,7 +212,7 @@ Item {
     id: agentScroll
     anchors.fill: parent
     contentWidth: width
-    contentHeight: agentColumn.implicitHeight
+    contentHeight: Math.max(height, agentColumn.implicitHeight)
     clip: true
     boundsBehavior: Flickable.StopAtBounds
     flickableDirection: Flickable.VerticalFlick
@@ -233,6 +233,7 @@ Item {
 
     Column {
       id: agentColumn
+      y: Math.max(0, (agentScroll.height - implicitHeight) / 2)
       width: agentScroll.width
       spacing: Style.space(12)
 
