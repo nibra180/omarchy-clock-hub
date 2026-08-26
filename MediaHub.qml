@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Io
 import qs.Commons
 import qs.Ui
 
@@ -12,6 +13,8 @@ Item {
   property bool panelOpen: false
   property color foreground: Color.foreground
   property string fontFamily: Style.font.family
+
+  signal closeRequested()
 
   readonly property var activePlayer: mediaService ? mediaService.activePlayer : null
   readonly property bool hasMedia: activePlayer !== null && (activePlayer.trackTitle || activePlayer.trackArtist)
@@ -43,6 +46,37 @@ Item {
     mediaService.runAction(action, false, mediaService.playerKey(activePlayer))
   }
 
+  function regexEscape(value) {
+    return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  }
+
+  function luaQuote(value) {
+    return "\"" + String(value || "").replace(/\\/g, "\\\\").replace(/\"/g, "\\\"") + "\""
+  }
+
+  function openMediaSource() {
+    if (!activePlayer) return
+
+    if (activePlayer.canRaise) {
+      activePlayer.raise()
+    } else {
+      var title = String(activePlayer.trackTitle || "").replace(/[\r\n]+/g, " ").trim()
+      var desktopEntry = String(activePlayer.desktopEntry || "").replace(/\.desktop$/, "")
+      if (title !== "") {
+        var selector = "title:.*" + regexEscape(title) + ".*"
+        sourceProcess.command = ["hyprctl", "dispatch", "hl.dsp.focus({ window = " + luaQuote(selector) + " })"]
+        sourceProcess.running = true
+      } else if (desktopEntry !== "") {
+        sourceProcess.command = ["gtk-launch", desktopEntry]
+        sourceProcess.running = true
+      } else {
+        return
+      }
+    }
+
+    root.closeRequested()
+  }
+
   onActivePlayerChanged: syncPosition()
   onPanelOpenChanged: if (panelOpen) syncPosition()
 
@@ -52,6 +86,11 @@ Item {
     running: root.panelOpen && root.activePlayer !== null && root.activePlayer.isPlaying
     triggeredOnStart: true
     onTriggered: root.syncPosition()
+  }
+
+  Process {
+    id: sourceProcess
+    running: false
   }
 
   Column {
@@ -102,6 +141,13 @@ Item {
           color: Qt.darker(root.foreground, 1.35)
           font.family: root.fontFamily
           font.pixelSize: Style.space(72)
+        }
+
+        MouseArea {
+          anchors.fill: parent
+          enabled: root.activePlayer !== null
+          cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+          onClicked: root.openMediaSource()
         }
       }
     }

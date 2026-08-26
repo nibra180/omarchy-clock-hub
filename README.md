@@ -10,9 +10,10 @@ a compact desktop hub.
 - Configurable weekday, ISO week, date, and time label
 - Animated, theme-aware now-playing indicator in the bar
 - Full Omarchy calendar with week numbers and month navigation
-- MPRIS media card with artwork, progress, and playback controls
+- Optional year- and life-progress bars above the calendar
+- MPRIS media card with clickable artwork, progress, and playback controls
 - Omarchy Agents dashboard with provider limits, daily usage, and model totals
-- Live CPU, memory, and root-disk status across the bottom of the hub
+- Live CPU, memory, and root-disk status with a btop shortcut
 - Automatic upstream change detection after `omarchy update`
 
 The hub reuses Omarchy's running `omarchy.media` service and the live

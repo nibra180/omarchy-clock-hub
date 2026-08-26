@@ -8,6 +8,7 @@ import qs.Ui
 Item {
   id: root
 
+  property var bar: null
   property bool running: false
   property color foreground: Color.foreground
   property string fontFamily: Style.font.family
@@ -15,7 +16,9 @@ Item {
   property real memoryUsage: 0
   property real diskUsage: 0
 
-  implicitHeight: Style.space(98)
+  signal closeRequested()
+
+  implicitHeight: Style.space(108)
 
   function clamp(value) {
     return Math.max(0, Math.min(100, Number(value) || 0))
@@ -23,6 +26,12 @@ Item {
 
   function refresh() {
     if (!systemProcess.running) systemProcess.running = true
+  }
+
+  function openBtop() {
+    if (!bar) return
+    bar.run("omarchy launch or focus tui btop")
+    root.closeRequested()
   }
 
   Timer {
@@ -74,12 +83,31 @@ Item {
     anchors.margins: Style.space(14)
     spacing: Style.space(8)
 
-    Text {
-      text: "SYSTEM STATUS"
-      color: Qt.darker(root.foreground, 1.5)
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.bodySmall
-      font.letterSpacing: 1
+    Item {
+      width: parent.width
+      height: Math.max(statusTitle.implicitHeight, btopButton.implicitHeight)
+
+      Text {
+        id: statusTitle
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        text: "SYSTEM STATUS"
+        color: Qt.darker(root.foreground, 1.5)
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.bodySmall
+        font.letterSpacing: 1
+      }
+
+      PanelActionButton {
+        id: btopButton
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        iconText: "󰍛"
+        tooltipText: "Open btop"
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        onClicked: root.openBtop()
+      }
     }
 
     Row {

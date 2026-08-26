@@ -300,6 +300,7 @@ Panel {
           panelOpen: root.opened
           foreground: root.contentForeground
           fontFamily: root.contentFontFamily
+          onCloseRequested: root.close()
         }
 
         Rectangle {
@@ -818,9 +819,11 @@ Panel {
         SystemStatus {
           id: systemStatus
           width: parent.width
+          bar: root.bar
           running: root.opened
           foreground: root.contentForeground
           fontFamily: root.contentFontFamily
+          onCloseRequested: root.close()
         }
       }
     }
