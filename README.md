@@ -3,6 +3,8 @@
 A theme-aware replacement for `omarchy.clock` that turns the clock popup into
 a compact desktop hub.
 
+![Omarchy Clock Hub showcase](assets/img/showcase.png)
+
 ## Features
 
 - Configurable weekday, ISO week, date, and time label
