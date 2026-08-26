@@ -286,9 +286,14 @@ Panel {
           height: Math.max(0, parent.height - systemStatus.implicitHeight - hubColumn.spacing)
           spacing: Style.space(18)
 
+          // Media : Calendar : Agents = 1 : 1.5 : 1. Equal side columns
+          // keep the wider calendar centered directly under the clock.
+          readonly property real usableWidth: width - Style.spacing.hairline * 2 - spacing * 4
+          readonly property real sideColumnWidth: Math.max(0, usableWidth / 3.5)
+
         MediaHub {
           id: mediaHub
-          width: implicitWidth
+          width: hubRow.sideColumnWidth
           height: parent.height
           bar: root.bar
           mediaService: root.mediaService
@@ -799,7 +804,7 @@ Panel {
 
           AgentsHub {
             id: agentsHub
-            width: implicitWidth
+            width: hubRow.sideColumnWidth
             height: parent.height
             bar: root.bar
             agentsWidget: root.agentsWidget
