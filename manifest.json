@@ -16,7 +16,35 @@
     "displayName": "Clock Hub",
     "description": "Clock, calendar, media, and agent usage in one expandable hub",
     "category": "Time",
-    "allowMultiple": false
+    "allowMultiple": false,
+    "defaults": {
+      "showMedia": true,
+      "showAgents": true,
+      "showSystemStatus": true
+    },
+    "schema": [
+      {
+        "key": "showMedia",
+        "type": "boolean",
+        "label": "Media",
+        "description": "Show media artwork, playback controls, and the bar's now-playing indicator.",
+        "defaultValue": true
+      },
+      {
+        "key": "showAgents",
+        "type": "boolean",
+        "label": "Agents",
+        "description": "Show agent usage, limits, and model totals in the hub.",
+        "defaultValue": true
+      },
+      {
+        "key": "showSystemStatus",
+        "type": "boolean",
+        "label": "System status",
+        "description": "Show CPU, memory, disk usage, and the btop shortcut.",
+        "defaultValue": true
+      }
+    ]
   },
   "omarchy": {
     "clonedFrom": "omarchy.clock"

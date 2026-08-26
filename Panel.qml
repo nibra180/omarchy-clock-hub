@@ -20,6 +20,8 @@ Panel {
   ipcTarget: "omarchy.clock"
   manageIpc: false
 
+  // IPC keeps the cloned clock identity; settings belong to the real layout entry.
+  readonly property string settingsEntryId: "io.github.nibra180.clock-hub"
   property var anchorItem: null
 
   // The bar tracks the widget mounted in its slot — BarWidget.qml — not this
@@ -57,7 +59,11 @@ Panel {
   readonly property int lifeExpectancy: Model.parseLifeExpectancy(setting("lifeExpectancy", 0))
   readonly property real lifeDone: Model.lifeProgress(age, lifeExpectancy)
   readonly property int lifeDonePercent: Model.lifeProgressPercent(age, lifeExpectancy)
+  readonly property bool showMedia: setting("showMedia", true) === true
+  readonly property bool showAgents: setting("showAgents", true) === true
+  readonly property bool showSystemStatus: setting("showSystemStatus", true) === true
   property bool editingLife: false
+  property bool quickSettingsOpen: false
 
   // Unset falls through to the locale's own first day, so a fresh install
   // starts out matching the rest of the desktop rather than a hardcoded
@@ -77,11 +83,11 @@ Panel {
   // contract instantiates it bare).
   readonly property color contentForeground: bar ? bar.foreground : Color.foreground
   readonly property string contentFontFamily: bar ? bar.fontFamily : Style.font.family
-  readonly property var mediaService: bar && bar.shell
+  readonly property var mediaService: root.showMedia && bar && bar.shell
     ? bar.shell.firstPartyServiceFor("omarchy.media")
     : null
   readonly property var agentsWidget: {
-    if (!bar || typeof bar.moduleWidgets !== "function") return null
+    if (!root.showAgents || !bar || typeof bar.moduleWidgets !== "function") return null
     var widgets = bar.moduleWidgets("omarchy.agents")
     return widgets.length > 0 ? widgets[0] : null
   }
@@ -91,6 +97,7 @@ Panel {
   readonly property int cellSpacing: Style.space(2)
   readonly property int weekColumnWidth: Style.space(32)
   readonly property int gutterWidth: Style.space(14)
+  readonly property int visibleSideCount: (showMedia ? 1 : 0) + (showAgents ? 1 : 0)
 
   function open() {
     refresh()
@@ -107,6 +114,7 @@ Panel {
 
   function close() {
     setCenterHoverRevealSuppressed(false)
+    root.quickSettingsOpen = false
     // Dismissing the panel mid-edit would otherwise leave the inputs up,
     // waiting behind a closed popup for the next time it opens.
     if (root.editingLife) root.cancelEditingLife()
@@ -158,14 +166,38 @@ Panel {
   // entry when the label format is cycled, so it has to be kept in step or
   // it would write this key straight back out from a stale copy.
   function persistSettings(values) {
-    var entry = { id: root.moduleName }
+    var entry = { id: root.settingsEntryId }
     for (var existing in root.settings) if (existing !== "id") entry[existing] = root.settings[existing]
     for (var key in values) entry[key] = values[key]
 
     root.settings = entry
     if (root.hostWidget && "settings" in root.hostWidget) root.hostWidget.settings = entry
     if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline(root.moduleName, entry)
+      root.bar.shell.updateEntryInline(root.settingsEntryId, entry)
+  }
+
+  function toggleSection(key, enabled) {
+    var values = {}
+    values[key] = !enabled
+    persistSettings(values)
+  }
+
+  function openQuickSettings() {
+    if (root.editingLife) root.cancelEditingLife()
+    root.quickSettingsOpen = true
+    quickSettingsMenu.cursor = 0
+  }
+
+  function closeQuickSettings() {
+    root.quickSettingsOpen = false
+    Qt.callLater(function() {
+      if (root.opened && keyCatcher) keyCatcher.forceActiveFocus()
+    })
+  }
+
+  function toggleQuickSettings() {
+    if (root.quickSettingsOpen) root.closeQuickSettings()
+    else root.openQuickSettings()
   }
 
   function setWeekStart(day) {
@@ -249,9 +281,22 @@ Panel {
     open: root.opened
     centerOnBar: true
     focusTarget: keyCatcher
-    contentWidth: panel.fittedContentWidth(Style.space(1270))
+
+    readonly property real horizontalContentInset: padding * 2
+      + Border.left(borderSpec) + Border.right(borderSpec)
+    readonly property real allVisibleCardWidth: fittedContentWidth(Style.space(1270))
+    readonly property real allVisibleRowWidth: Math.max(0,
+      allVisibleCardWidth - horizontalContentInset)
+    readonly property real sectionUnitWidth: Math.max(0,
+      (allVisibleRowWidth - 2 * (Style.spacing.hairline + Style.space(18) * 2)) / 3.5)
+    readonly property real desiredCardWidth: horizontalContentInset
+      + (1.5 + root.visibleSideCount) * sectionUnitWidth
+      + root.visibleSideCount * (Style.spacing.hairline + Style.space(18) * 2)
+
+    contentWidth: fittedContentWidth(desiredCardWidth)
     contentHeight: panel.fittedContentHeight(
-      calendarColumn.implicitHeight + Style.space(18) + systemStatus.implicitHeight
+      calendarColumn.implicitHeight
+        + (root.showSystemStatus ? Style.space(18) + systemStatus.implicitHeight : 0)
     )
 
     PanelKeyCatcher {
@@ -259,19 +304,37 @@ Panel {
       anchors.fill: parent
       blocked: root.editingLife
       onMoveRequested: function(dx, dy) {
+        if (root.quickSettingsOpen) {
+          if (dy !== 0) quickSettingsMenu.moveCursor(dy)
+          return
+        }
         if (dx !== 0) root.moveMonth(dx)
         if (dy !== 0) root.moveYear(dy)
       }
-      onActivateRequested: root.goToToday()
-      onCloseRequested: root.close()
-      onTabRequested: function(direction) { root.switchPanel(direction) }
+      onActivateRequested: {
+        if (root.quickSettingsOpen) quickSettingsMenu.activateCursor()
+        else root.goToToday()
+      }
+      onCloseRequested: {
+        if (root.quickSettingsOpen) root.closeQuickSettings()
+        else root.close()
+      }
+      onTabRequested: function(direction) {
+        if (root.quickSettingsOpen) quickSettingsMenu.moveCursor(direction)
+        else root.switchPanel(direction)
+      }
       onTextKey: function(t) {
+        if (root.quickSettingsOpen) {
+          if (t === "s" || t === "S") root.closeQuickSettings()
+          return
+        }
         if (t === "[") root.moveMonth(-1)
         else if (t === "]") root.moveMonth(1)
         else if (t === "{") root.moveYear(-1)
         else if (t === "}") root.moveYear(1)
         else if (t === "t" || t === "T") root.goToToday()
         else if (t === "w" || t === "W") root.toggleWeekStart()
+        else if (t === "s" || t === "S") root.openQuickSettings()
       }
 
       Column {
@@ -282,27 +345,31 @@ Panel {
         Row {
           id: hubRow
           width: parent.width
-          height: Math.max(0, parent.height - systemStatus.implicitHeight - hubColumn.spacing)
+          height: Math.max(0, parent.height
+            - (root.showSystemStatus ? systemStatus.implicitHeight + hubColumn.spacing : 0))
           spacing: Style.space(18)
 
-          // Media : Calendar : Agents = 1 : 1.5 : 1. Equal side columns
-          // keep the wider calendar centered directly under the clock.
-          readonly property real usableWidth: width - Style.spacing.hairline * 2 - spacing * 4
-          readonly property real sideColumnWidth: Math.max(0, usableWidth / 3.5)
+          readonly property real unitWidth: Math.max(0,
+            (width - root.visibleSideCount * (Style.spacing.hairline + spacing * 2))
+              / (1.5 + root.visibleSideCount))
+          readonly property real sideColumnWidth: unitWidth
+          readonly property real calendarColumnWidth: unitWidth * 1.5
 
         MediaHub {
           id: mediaHub
+          visible: root.showMedia
           width: hubRow.sideColumnWidth
           height: parent.height
           bar: root.bar
           mediaService: root.mediaService
-          panelOpen: root.opened
+          panelOpen: root.opened && root.showMedia
           foreground: root.contentForeground
           fontFamily: root.contentFontFamily
           onCloseRequested: root.close()
         }
 
         Rectangle {
+          visible: root.showMedia
           width: Style.spacing.hairline
           height: parent.height
           color: root.contentForeground
@@ -311,7 +378,7 @@ Panel {
 
         Flickable {
           id: calendarScroll
-          width: Math.max(0, hubRow.width - mediaHub.width - agentsHub.width - Style.spacing.hairline * 2 - hubRow.spacing * 4)
+          width: hubRow.calendarColumnWidth
           height: hubRow.height
           contentWidth: calendarColumn.width
           contentHeight: Math.max(height, calendarColumn.implicitHeight)
@@ -795,6 +862,7 @@ Panel {
       }
 
         Rectangle {
+          visible: root.showAgents
           width: Style.spacing.hairline
           height: parent.height
           color: root.contentForeground
@@ -803,11 +871,12 @@ Panel {
 
           AgentsHub {
             id: agentsHub
+            visible: root.showAgents
             width: hubRow.sideColumnWidth
             height: parent.height
             bar: root.bar
             agentsWidget: root.agentsWidget
-            panelOpen: root.opened
+            panelOpen: root.opened && root.showAgents
             foreground: root.contentForeground
             fontFamily: root.contentFontFamily
             onCloseRequested: root.close()
@@ -816,12 +885,62 @@ Panel {
 
         SystemStatus {
           id: systemStatus
+          visible: root.showSystemStatus
           width: parent.width
           bar: root.bar
-          running: root.opened
+          running: root.opened && root.showSystemStatus
           foreground: root.contentForeground
           fontFamily: root.contentFontFamily
           onCloseRequested: root.close()
+        }
+      }
+
+      Item {
+        id: quickSettingsLayer
+        anchors.fill: parent
+        z: 100
+
+        MouseArea {
+          anchors.fill: parent
+          visible: root.quickSettingsOpen
+          hoverEnabled: true
+          acceptedButtons: Qt.AllButtons
+          onClicked: root.closeQuickSettings()
+
+          WheelHandler {
+            onWheel: function(event) { event.accepted = true }
+          }
+        }
+
+        PanelActionButton {
+          id: quickSettingsButton
+          x: hubRow.x + calendarScroll.x + calendarScroll.width - width - Style.space(4)
+          y: hubRow.y + Style.space(4)
+          z: 2
+          iconText: "󰒓"
+          tooltipText: root.quickSettingsOpen ? "Close hub settings" : "Configure hub"
+          foreground: root.contentForeground
+          fontFamily: root.contentFontFamily
+          bordered: root.quickSettingsOpen
+          hasCursor: root.quickSettingsOpen
+          onClicked: root.toggleQuickSettings()
+        }
+
+        HubSettingsMenu {
+          id: quickSettingsMenu
+          visible: root.quickSettingsOpen
+          x: Math.max(Style.space(4), Math.min(parent.width - width - Style.space(4),
+            quickSettingsButton.x + quickSettingsButton.width - width))
+          y: quickSettingsButton.y + quickSettingsButton.height + Style.space(4)
+          z: 2
+          mediaEnabled: root.showMedia
+          agentsEnabled: root.showAgents
+          systemStatusEnabled: root.showSystemStatus
+          foreground: root.contentForeground
+          fontFamily: root.contentFontFamily
+          onMediaToggled: root.toggleSection("showMedia", root.showMedia)
+          onAgentsToggled: root.toggleSection("showAgents", root.showAgents)
+          onSystemStatusToggled: root.toggleSection("showSystemStatus", root.showSystemStatus)
         }
       }
     }

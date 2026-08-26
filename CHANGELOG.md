@@ -4,6 +4,11 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Manifest-backed Media, Agents, and System Status toggles with an in-hub quick settings menu.
+- Node tests for clock and calendar logic plus the Omarchy plugin contracts.
+
 ## [1.0.0] - 2026-08-26
 
 ### Added

@@ -14,6 +14,7 @@ a compact desktop hub.
 - MPRIS media card with clickable artwork, progress, and playback controls
 - Omarchy Agents dashboard with provider limits, daily usage, and model totals
 - Live CPU, memory, and root-disk status with a btop shortcut
+- Manifest-backed toggles for Media, Agents, and System Status
 - Automatic upstream change detection after `omarchy update`
 
 The hub reuses Omarchy's running `omarchy.media` service and the live
@@ -22,9 +23,9 @@ The hub reuses Omarchy's running `omarchy.media` service and the live
 ## Requirements
 
 - Omarchy 4.0 or newer
-- The stock `omarchy.media` service
-- `omarchy.agents` in the bar for the Agents dashboard
-- `bash`, `awk`, `df`, and the Linux `/proc` filesystem for system status
+- The stock `omarchy.media` service when the Media section is enabled
+- `omarchy.agents` in the bar when the Agents section is enabled
+- `bash`, `awk`, `df`, and the Linux `/proc` filesystem when System Status is enabled
 
 ## Installation
 
@@ -57,6 +58,14 @@ Add or adjust the Clock Hub entry in `~/.config/omarchy/shell.json`:
 Right-clicking the clock cycles through the available formats. Left-clicking
 opens the hub; middle-clicking opens Omarchy's timezone picker.
 
+## Configurable sections
+
+Media, Agents, and System Status are enabled by default. Toggle them from
+Omarchy's widget settings or from the settings button in the calendar's
+upper-right corner. Changes apply immediately and persist in `shell.json`.
+Disabling Media also removes the now-playing indicator and tooltip from the
+bar. The calendar and optional life-progress feature remain available.
+
 ## Optional upstream notifications
 
 Install the included post-update hook:
@@ -72,10 +81,14 @@ It only reports upstream changes. It never overwrites local QML. See
 ## Development
 
 ```bash
-qmllint -I /usr/share/omarchy/shell AgentsHub.qml MediaHub.qml Panel.qml SystemStatus.qml VinylIndicator.qml
+node --test test/*.test.js
+qmllint -I /usr/share/omarchy/shell AgentsHub.qml HubSettingsMenu.qml MediaHub.qml Panel.qml SystemStatus.qml VinylIndicator.qml
 omarchy plugin validate ~/.config/omarchy/plugins/io.github.nibra180.clock-hub
 omarchy restart shell
 ```
+
+The Node suite covers the pure calendar and clock model plus the public Omarchy
+plugin contracts. It uses only Node's built-in test runner.
 
 Plugin files hot-reload while editing. Keep personal settings in
 `~/.config/omarchy/shell.json`; do not commit them to this repository.

@@ -14,6 +14,8 @@ BarWidget {
   id: root
   moduleName: "omarchy.clock"
 
+  // IPC keeps the cloned clock identity; settings belong to the real layout entry.
+  readonly property string settingsEntryId: "io.github.nibra180.clock-hub"
   property date displayDate: clock.date
 
   readonly property string configuredFormat: vertical
@@ -24,6 +26,7 @@ BarWidget {
     : setting("formatAlt", "d MMMM 'W'ww yyyy")
 
   readonly property var formatRing: Model.clockFormatRing(configuredFormat, configuredAltFormat, Model.clockFormats(vertical))
+  readonly property bool showMedia: setting("showMedia", true) === true
 
   // What the bar shows is what shell.json stores, so a cycled format is the
   // format from then on rather than something that reverts on restart.
@@ -31,7 +34,7 @@ BarWidget {
   readonly property string displayText: formatted(displayDate)
   readonly property var verticalLines: displayText.split("\n")
 
-  readonly property var mediaService: bar && bar.shell
+  readonly property var mediaService: root.showMedia && bar && bar.shell
     ? bar.shell.firstPartyServiceFor("omarchy.media")
     : null
   readonly property var activePlayer: mediaService ? mediaService.activePlayer : null
@@ -49,7 +52,7 @@ BarWidget {
     var next = Model.nextClockFormat(formatRing, current)
     if (next === "" || next === current) return
 
-    var entry = { id: root.moduleName }
+    var entry = { id: root.settingsEntryId }
     for (var key in root.settings) if (key !== "id") entry[key] = root.settings[key]
     entry[vertical ? "verticalFormat" : "format"] = next
 
@@ -57,7 +60,7 @@ BarWidget {
     // shell.json write comes back through the bar as the same value.
     root.settings = entry
     if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline(root.moduleName, entry)
+      root.bar.shell.updateEntryInline(root.settingsEntryId, entry)
   }
 
   function formatted(date) {
