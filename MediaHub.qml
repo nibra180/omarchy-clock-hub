@@ -95,7 +95,6 @@ Item {
 
   Column {
     id: mediaColumn
-    anchors.verticalCenter: parent.verticalCenter
     width: parent.width
     spacing: Style.space(10)
 
@@ -119,7 +118,7 @@ Item {
         anchors.centerIn: parent
         width: Style.space(200)
         height: width
-        radius: Style.cornerRadius > 0 ? Style.space(16) : 0
+        radius: Style.cornerRadius
         clip: true
         color: Style.normalFillFor(root.foreground, Color.accent)
         borderSpec: Border.controlSpec("normal", root.foreground, Color.accent)

@@ -251,8 +251,7 @@ Panel {
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(1270))
     contentHeight: panel.fittedContentHeight(
-      Math.max(mediaHub.implicitHeight, calendarColumn.implicitHeight, agentsHub.implicitHeight)
-        + Style.space(18) + systemStatus.implicitHeight
+      calendarColumn.implicitHeight + Style.space(18) + systemStatus.implicitHeight
     )
 
     PanelKeyCatcher {
@@ -322,7 +321,6 @@ Panel {
 
         Column {
           id: calendarColumn
-          y: Math.max(0, (calendarScroll.height - implicitHeight) / 2)
           // Never narrower than the grid. The popup width is capped to what
           // the screen allows, and a fixed seven-column grid would otherwise
           // lose its last days off the edge instead of scrolling.

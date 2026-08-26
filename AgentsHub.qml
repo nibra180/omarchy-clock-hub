@@ -206,7 +206,9 @@ Item {
 
   onAgentsWidgetChanged: selectMainProvider()
   onProvidersChanged: selectMainProvider()
-  onPanelOpenChanged: if (panelOpen) agentScroll.contentY = 0
+  onPanelOpenChanged: if (panelOpen) Qt.callLater(function() {
+    agentScroll.contentY = agentScroll.originY
+  })
 
   Flickable {
     id: agentScroll
@@ -220,7 +222,6 @@ Item {
 
     Column {
       id: agentColumn
-      y: Math.max(0, (agentScroll.height - implicitHeight) / 2)
       width: agentScroll.width
       spacing: Style.space(12)
 
