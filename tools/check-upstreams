@@ -5,7 +5,9 @@ set -uo pipefail
 
 PLUGIN_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 LOCK_FILE="$PLUGIN_DIR/UPSTREAMS.json"
-STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/nibra-clock-upstreams"
+PLUGIN_ID=$(jq -r '.id // "clock-hub"' "$PLUGIN_DIR/manifest.json")
+STATE_SLUG=${PLUGIN_ID//./-}
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/${STATE_SLUG}-upstreams"
 BASELINE_DIR="$STATE_DIR/baseline"
 REPORTS_DIR="$STATE_DIR/reports"
 RUIXEN_MIRROR="$STATE_DIR/ruixen.git"
@@ -198,7 +200,7 @@ mkdir -p "$report_dir"
 summary="$report_dir/summary.txt"
 
 {
-  echo "nibra.clock upstream report"
+  echo "$PLUGIN_ID upstream report"
   echo "Generated: $(date --iso-8601=seconds)"
   echo
   echo "Omarchy reviewed:  $reviewed_version"

@@ -15,7 +15,7 @@ Reviewed Omarchy snapshots and generated reports are stored outside the plugin
 at:
 
 ```text
-~/.local/state/omarchy/nibra-clock-upstreams/
+~/.local/state/omarchy/io-github-nibra180-clock-hub-upstreams/
 ```
 
 ## Checking
@@ -23,7 +23,7 @@ at:
 A check runs automatically after `omarchy update`. Run the same check manually:
 
 ```bash
-~/.config/omarchy/plugins/nibra.clock/tools/check-upstreams
+~/.config/omarchy/plugins/io.github.nibra180.clock-hub/tools/check-upstreams
 ```
 
 When changes are found, inspect the report path printed by the command. Reports
@@ -35,7 +35,7 @@ First adapt and test this plugin as needed. Then mark the current upstream state
 as reviewed:
 
 ```bash
-~/.config/omarchy/plugins/nibra.clock/tools/check-upstreams --accept
+~/.config/omarchy/plugins/io.github.nibra180.clock-hub/tools/check-upstreams --accept
 ```
 
 Commit the resulting `UPSTREAMS.json` update together with any compatibility
@@ -45,6 +45,6 @@ changes. `--accept` only advances the review baseline; it never modifies QML.
 
 ```bash
 qmllint -I /usr/share/omarchy/shell ./*.qml
-omarchy plugin validate ~/.config/omarchy/plugins/nibra.clock
+omarchy plugin validate ~/.config/omarchy/plugins/io.github.nibra180.clock-hub
 omarchy restart shell
 ```

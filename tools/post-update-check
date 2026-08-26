@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Installed into ~/.config/omarchy/hooks/post-update.d/.
-checker="$HOME/.config/omarchy/plugins/nibra.clock/tools/check-upstreams"
+checker="$HOME/.config/omarchy/plugins/io.github.nibra180.clock-hub/tools/check-upstreams"
 
 if [[ -x $checker ]]; then
   "$checker" --notify || true
 else
-  logger -t nibra-clock "Upstream checker missing: $checker"
+  logger -t omarchy-clock-hub "Upstream checker missing: $checker"
 fi

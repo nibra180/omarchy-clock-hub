@@ -1,10 +1,11 @@
 {
   "schemaVersion": 1,
-  "id": "nibra.clock",
-  "name": "My Clock",
+  "id": "io.github.nibra180.clock-hub",
+  "name": "Clock Hub",
   "version": "1.0.0",
-  "author": "Omarchy",
-  "description": "Date/time label with a calendar popup",
+  "author": "Niklas Braun (nibra180)",
+  "license": "MIT",
+  "description": "Theme-aware clock hub with calendar, MPRIS media controls, and Omarchy Agents usage.",
   "kinds": [
     "bar-widget"
   ],
@@ -12,8 +13,8 @@
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "My Clock",
-    "description": "Date/time label with a calendar popup",
+    "displayName": "Clock Hub",
+    "description": "Clock, calendar, media, and agent usage in one expandable hub",
     "category": "Time",
     "allowMultiple": false
   },
