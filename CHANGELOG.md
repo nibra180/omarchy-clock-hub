@@ -9,6 +9,8 @@ All notable changes to Omarchy Clock Hub are documented here.
 - Manifest-backed Media, Agents, and System Status toggles with an in-hub quick settings menu.
 - Selectable Vinyl, Equalizer, and Pulse animations for the bar's now-playing indicator, including an in-hub picker.
 - Node tests for clock and calendar logic plus the Omarchy plugin contracts.
+- Optional read-only Google Calendar integration with OAuth PKCE, Secret Service token storage, selected-day event dots, and a full-width event rail.
+- Python helper tests for OAuth, credential storage, event filtering, pagination, and API failures.
 
 ## [1.0.0] - 2026-08-26
 

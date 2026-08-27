@@ -8,9 +8,8 @@ import "Model.js" as Model
 // sit beside the weather panel — same hero-over-detail composition, same
 // spacing scale, same small-caps labels.
 //
-// The grid is a read-out rather than a picker: today is the only marked
-// day, and the only thing that moves is which month is on screen —
-// chevrons, the scroll wheel, and the arrow keys all step it.
+// The grid keeps its month-first keyboard navigation, while pointer users can
+// select a day to inspect its Google Calendar events in the full-width rail.
 //
 // BarWidget.qml owns the bar label and hands this panel the button to
 // anchor against.
@@ -34,15 +33,18 @@ Panel {
 
   // ---- Today. SystemClock keeps this honest across midnight so the
   //      highlight rolls over without the panel being reopened.
-  property date today: new Date()
+  property date now: new Date()
+  property date today: new Date(now.getTime())
   readonly property string todayKey: Model.keyForDate(today)
 
-  // The month on screen. Stepping moves this and nothing else: the grid is
-  // a read-out, not a picker, so there is no per-day cursor to keep in sync.
+  // The month on screen. Arrow keys keep moving by month/year; day selection
+  // is pointer-only in the first calendar integration.
   property int viewYear: today.getFullYear()
   property int viewMonth: today.getMonth()
+  property date selectedDate: new Date(today.getTime())
 
   readonly property date viewDate: new Date(viewYear, viewMonth, 1)
+  readonly property string selectedKey: Model.keyForDate(selectedDate)
   readonly property bool viewingCurrentMonth: viewYear === today.getFullYear() && viewMonth === today.getMonth()
 
   // Pinned to today, not to the month being browsed — stepping through the
@@ -62,6 +64,7 @@ Panel {
   readonly property bool showMedia: setting("showMedia", true) === true
   readonly property bool showAgents: setting("showAgents", true) === true
   readonly property bool showSystemStatus: setting("showSystemStatus", true) === true
+  readonly property bool showGoogleCalendar: setting("showGoogleCalendar", false) === true
   readonly property string mediaIndicatorStyle: {
     var value = String(setting("mediaIndicatorStyle", "Equalizer"))
     return value === "Vinyl" || value === "Pulse" ? value : "Equalizer"
@@ -81,7 +84,12 @@ Panel {
   readonly property string nextWeekStartLabel: labelLocale.dayName(Model.toggledWeekStart(weekStart), Locale.LongFormat)
   readonly property var weekdays: Model.weekdayOrder(weekStart)
   readonly property var weeks: Model.monthGrid(viewYear, viewMonth, weekStart, todayKey)
-
+  readonly property var visibleGridRange: Model.visibleGridRange(viewYear, viewMonth, weekStart)
+  readonly property date calendarRangeStart: dateFromKey(visibleGridRange.start)
+  readonly property date calendarRangeEnd: dateFromKey(visibleGridRange.end)
+  readonly property var eventsByDay: Model.indexEventsByDay(
+    calendarProvider.events, visibleGridRange)
+  readonly property var selectedEvents: Model.barEventsForDay(eventsByDay, selectedKey, now)
 
   // Guarded so the widget renders before the bar is injected (the bar-widget
   // contract instantiates it bare).
@@ -144,23 +152,39 @@ Panel {
   }
 
   function refresh() {
-    root.today = new Date()
+    root.now = new Date()
+    root.today = new Date(root.now.getTime())
     root.goToToday()
   }
 
   function goToToday() {
     root.viewYear = today.getFullYear()
     root.viewMonth = today.getMonth()
+    root.selectedDate = new Date(today.getTime())
   }
 
   function moveMonth(delta) {
     var next = Model.stepMonth(viewYear, viewMonth, delta)
     root.viewYear = next.year
     root.viewMonth = next.month
+    root.selectedDate = new Date(next.year, next.month, 1)
   }
 
   function moveYear(delta) {
     moveMonth(delta * 12)
+  }
+
+  function dateFromKey(key) {
+    var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key || ""))
+    if (!match) return new Date(0)
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  }
+
+  function selectDay(day) {
+    if (!day) return
+    root.viewYear = Number(day.year)
+    root.viewMonth = Number(day.month)
+    root.selectedDate = new Date(Number(day.year), Number(day.month), Number(day.day))
   }
 
   // Applied locally first so the panel redraws on the click itself; the
@@ -271,12 +295,21 @@ Panel {
     return String(labelLocale.dayName(weekday, Locale.ShortFormat)).toUpperCase()
   }
 
+  GoogleCalendarProvider {
+    id: calendarProvider
+    enabled: root.showGoogleCalendar
+    panelOpen: root.opened
+    rangeStart: root.calendarRangeStart
+    rangeEnd: root.calendarRangeEnd
+  }
+
   SystemClock {
     id: clock
     precision: SystemClock.Minutes
     onDateChanged: {
+      root.now = clock.date
       if (Model.keyForDate(clock.date) === String(root.todayKey)) return
-      var followToday = root.viewingCurrentMonth
+      var followToday = root.selectedKey === root.todayKey
       root.today = clock.date
       if (followToday) root.goToToday()
     }
@@ -305,6 +338,7 @@ Panel {
     contentWidth: fittedContentWidth(desiredCardWidth)
     contentHeight: panel.fittedContentHeight(
       calendarColumn.implicitHeight
+        + (root.showGoogleCalendar ? Style.space(18) + calendarEventsBar.implicitHeight : 0)
         + (root.showSystemStatus ? Style.space(18) + systemStatus.implicitHeight : 0)
     )
 
@@ -314,7 +348,8 @@ Panel {
       blocked: root.editingLife
       onMoveRequested: function(dx, dy) {
         if (root.quickSettingsOpen) {
-          if (dx !== 0 && quickSettingsMenu.cursor === 3) quickSettingsMenu.moveIndicator(dx)
+          if (dx !== 0 && quickSettingsMenu.cursor === quickSettingsMenu.indicatorRow)
+            quickSettingsMenu.moveIndicator(dx)
           if (dy !== 0) quickSettingsMenu.moveCursor(dy)
           return
         }
@@ -356,6 +391,7 @@ Panel {
           id: hubRow
           width: parent.width
           height: Math.max(0, parent.height
+            - (root.showGoogleCalendar ? calendarEventsBar.implicitHeight + hubColumn.spacing : 0)
             - (root.showSystemStatus ? systemStatus.implicitHeight + hubColumn.spacing : 0))
           spacing: Style.space(18)
 
@@ -778,21 +814,53 @@ Panel {
                       width: root.cellWidth
                       height: root.cellHeight
                       radius: Style.cornerRadius
-                      // Today is outlined, not filled: a lit-up block shouts
-                      // over a grid this quiet.
-                      color: "transparent"
+                      readonly property bool selected: modelData.key === root.selectedKey
+                      readonly property int eventDotCount: root.showGoogleCalendar
+                        ? Model.eventDotSummary(root.eventsByDay, modelData.key).count
+                        : 0
+
+                      color: selected
+                        ? Style.selectedFillFor(root.contentForeground, Color.accent)
+                        : "transparent"
                       border.width: modelData.today ? Style.spacing.hairline : 0
                       border.color: Style.normalBorderFor(root.contentForeground, Color.accent)
 
+                      MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.selectDay(modelData)
+                      }
+
                       Text {
                         anchors.centerIn: parent
+                        anchors.verticalCenterOffset: parent.eventDotCount > 0 ? -Style.space(3) : 0
                         text: modelData.day
                         color: modelData.inMonth
                           ? (modelData.weekend ? Qt.darker(root.contentForeground, 1.45) : root.contentForeground)
                           : Qt.darker(root.contentForeground, 2.2)
                         font.family: root.contentFontFamily
                         font.pixelSize: Style.font.body
-                        font.bold: modelData.today
+                        font.bold: modelData.today || parent.selected
+                      }
+
+                      Row {
+                        visible: parent.eventDotCount > 0
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: Style.space(4)
+                        spacing: Style.space(2)
+
+                        Repeater {
+                          model: parent.parent.eventDotCount
+
+                          Rectangle {
+                            width: Style.space(4)
+                            height: width
+                            radius: width / 2
+                            color: Style.selectedStateColor(root.contentForeground, Color.accent)
+                          }
+                        }
                       }
                     }
                   }
@@ -893,6 +961,23 @@ Panel {
           }
         }
 
+        CalendarEventsBar {
+          id: calendarEventsBar
+          visible: root.showGoogleCalendar
+          width: parent.width
+          selectedDate: root.selectedDate
+          events: root.selectedEvents
+          totalEventCount: root.selectedEvents.length
+          state: calendarProvider.state
+          lastUpdated: calendarProvider.lastUpdated
+          refreshing: calendarProvider.refreshing || calendarProvider.authorizing
+          foreground: root.contentForeground
+          fontFamily: root.contentFontFamily
+          onConnectRequested: calendarProvider.connectAccount()
+          onReconnectRequested: calendarProvider.connectAccount()
+          onRefreshRequested: calendarProvider.refresh(true)
+        }
+
         SystemStatus {
           id: systemStatus
           visible: root.showSystemStatus
@@ -946,12 +1031,21 @@ Panel {
           mediaEnabled: root.showMedia
           agentsEnabled: root.showAgents
           systemStatusEnabled: root.showSystemStatus
+          calendarEnabled: root.showGoogleCalendar
+          calendarConnected: calendarProvider.authenticated
+          calendarCanConnect: calendarProvider.state === "disconnected"
+            || calendarProvider.state === "reauth_required"
+          calendarState: calendarProvider.state
+          calendarStatus: calendarProvider.statusText
           indicatorStyle: root.mediaIndicatorStyle
           foreground: root.contentForeground
           fontFamily: root.contentFontFamily
           onMediaToggled: root.toggleSection("showMedia", root.showMedia)
           onAgentsToggled: root.toggleSection("showAgents", root.showAgents)
           onSystemStatusToggled: root.toggleSection("showSystemStatus", root.showSystemStatus)
+          onCalendarToggled: root.toggleSection("showGoogleCalendar", root.showGoogleCalendar)
+          onCalendarConnectRequested: calendarProvider.connectAccount()
+          onCalendarDisconnectRequested: calendarProvider.disconnectAccount()
           onIndicatorStyleSelected: function(style) { root.setMediaIndicatorStyle(style) }
         }
       }

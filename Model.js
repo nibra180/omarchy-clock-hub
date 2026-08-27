@@ -217,6 +217,218 @@ function lifeProgressPercent(age, expectancy) {
   return Math.round(lifeProgress(age, expectancy) * 100)
 }
 
+function utcCalendarDate(year, month, day) {
+  var date = new Date(0)
+  date.setUTCHours(0, 0, 0, 0)
+  date.setUTCFullYear(Number(year), Number(month), Number(day))
+  return date
+}
+
+function keyForUtcDate(date) {
+  return dateKey(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+}
+
+function dateOnlyValue(value) {
+  var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""))
+  if (!match) return null
+
+  var year = Number(match[1])
+  var month = Number(match[2]) - 1
+  var day = Number(match[3])
+  var date = utcCalendarDate(year, month, day)
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) return null
+  return date
+}
+
+// The date-only bounds of the fixed calendar grid. `end` is exclusive, which
+// matches Google Calendar's timeMax and all-day end-date conventions.
+function visibleGridRange(year, month, weekStart) {
+  var first = utcCalendarDate(year, month, 1)
+  var start = normalizedWeekStart(weekStart, 1)
+  var leading = (first.getUTCDay() - start + 7) % 7
+  first.setUTCDate(first.getUTCDate() - leading)
+
+  var end = utcCalendarDate(first.getUTCFullYear(), first.getUTCMonth(), first.getUTCDate() + 42)
+  return { start: keyForUtcDate(first), end: keyForUtcDate(end) }
+}
+
+function copyEvent(event) {
+  return {
+    id: event.id,
+    summary: event.summary,
+    allDay: event.allDay === true,
+    start: event.start,
+    end: event.end,
+    eventType: event.eventType,
+    transparency: event.transparency
+  }
+}
+
+function addEventToDay(index, key, event) {
+  if (!index[key]) index[key] = []
+  index[key].push(event)
+}
+
+function eventIndexRange(range) {
+  if (!range || typeof range !== "object") return null
+  var start = dateOnlyValue(range.start)
+  var end = dateOnlyValue(range.end)
+  if (!start || !end || start.getTime() >= end.getTime()) return null
+  return { start: start, end: end }
+}
+
+function indexAllDayEvent(index, event, range) {
+  var cursor = dateOnlyValue(event.start)
+  var end = dateOnlyValue(event.end)
+  if (!cursor || !end || cursor.getTime() >= end.getTime()) return
+  if (range) {
+    if (cursor.getTime() < range.start.getTime())
+      cursor = new Date(range.start.getTime())
+    if (end.getTime() > range.end.getTime())
+      end = new Date(range.end.getTime())
+  }
+
+  var days = 0
+  while (cursor.getTime() < end.getTime() && days < 370) {
+    addEventToDay(index, keyForUtcDate(cursor), event)
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
+    days++
+  }
+}
+
+function localDateFromKey(key) {
+  var value = dateOnlyValue(key)
+  return value ? new Date(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 12) : null
+}
+
+function indexTimedEvent(index, event, range) {
+  var start = new Date(event.start)
+  var end = new Date(event.end)
+  if (!isFinite(start.getTime()) || !isFinite(end.getTime()) || start.getTime() >= end.getTime()) return
+
+  // End instants are exclusive. Subtracting one millisecond keeps an event
+  // ending at local midnight off the following day.
+  var last = new Date(end.getTime() - 1)
+  var firstKey = keyForDate(start)
+  var lastKey = keyForDate(last)
+  if (range) {
+    var rangeStartKey = keyForUtcDate(range.start)
+    var rangeLast = new Date(range.end.getTime())
+    rangeLast.setUTCDate(rangeLast.getUTCDate() - 1)
+    var rangeLastKey = keyForUtcDate(rangeLast)
+    if (firstKey < rangeStartKey) firstKey = rangeStartKey
+    if (lastKey > rangeLastKey) lastKey = rangeLastKey
+  }
+  if (firstKey > lastKey) return
+
+  var cursor = localDateFromKey(firstKey)
+  var days = 0
+  while (cursor && days < 370) {
+    var key = keyForDate(cursor)
+    addEventToDay(index, key, event)
+    if (key === lastKey) return
+    cursor.setDate(cursor.getDate() + 1)
+    days++
+  }
+}
+
+// Build local-day buckets without changing the source array or its events.
+// All-day dates stay date-only; JS Date converts timed instants to desktop time.
+// An optional visible range bounds pathological multi-year events.
+function indexEventsByDay(events, visibleRange) {
+  var index = {}
+  var source = Array.isArray(events) ? events : []
+  var range = eventIndexRange(visibleRange)
+
+  for (var i = 0; i < source.length; i++) {
+    if (!source[i] || typeof source[i] !== "object") continue
+    var event = copyEvent(source[i])
+    if (event.allDay) indexAllDayEvent(index, event, range)
+    else indexTimedEvent(index, event, range)
+  }
+  return index
+}
+
+function eventsForDay(index, dayKey) {
+  if (!index || !Array.isArray(index[dayKey])) return []
+  return index[dayKey].slice()
+}
+
+function eventDotSummary(index, dayKey) {
+  var total = eventsForDay(index, dayKey).length
+  return { count: Math.min(3, total), total: total }
+}
+
+function dateValue(value) {
+  var date = value instanceof Date ? new Date(value.getTime()) : new Date(value)
+  return isFinite(date.getTime()) ? date : null
+}
+
+// Past timed entries disappear from today's bar. All-day, ongoing, and future
+// entries remain, and browsing another date never applies the current time.
+function filterPastEventsForToday(events, dayKey, now) {
+  var source = Array.isArray(events) ? events : []
+  var current = dateValue(now)
+  if (!current || String(dayKey) !== keyForDate(current)) return source.slice()
+
+  return source.filter(function(event) {
+    if (event.allDay === true) return true
+    var end = dateValue(event.end)
+    return end !== null && end.getTime() > current.getTime()
+  })
+}
+
+function compareValues(left, right) {
+  if (left < right) return -1
+  if (left > right) return 1
+  return 0
+}
+
+function eventStartValue(event) {
+  if (event.allDay === true) return String(event.start || "")
+  var start = dateValue(event.start)
+  return start ? start.getTime() : Infinity
+}
+
+function eventTieBreak(left, right) {
+  var byStart = compareValues(eventStartValue(left), eventStartValue(right))
+  if (byStart !== 0) return byStart
+  var bySummary = compareValues(String(left.summary || ""), String(right.summary || ""))
+  return bySummary !== 0 ? bySummary : compareValues(String(left.id || ""), String(right.id || ""))
+}
+
+function todayEventGroup(event, now) {
+  if (event.allDay === true) return 1
+  var start = dateValue(event.start)
+  var end = dateValue(event.end)
+  if (start && end && start.getTime() <= now.getTime() && end.getTime() > now.getTime()) return 0
+  if (start && start.getTime() > now.getTime()) return 2
+  return 3
+}
+
+function sortEventsForDay(events, dayKey, now) {
+  var sorted = Array.isArray(events) ? events.slice() : []
+  var current = dateValue(now)
+  var today = current !== null && String(dayKey) === keyForDate(current)
+
+  sorted.sort(function(left, right) {
+    if (today) {
+      var byGroup = todayEventGroup(left, current) - todayEventGroup(right, current)
+      if (byGroup !== 0) return byGroup
+    } else {
+      var byAllDay = (left.allDay === true ? 0 : 1) - (right.allDay === true ? 0 : 1)
+      if (byAllDay !== 0) return byAllDay
+    }
+    return eventTieBreak(left, right)
+  })
+  return sorted
+}
+
+function barEventsForDay(index, dayKey, now) {
+  var events = eventsForDay(index, dayKey)
+  return sortEventsForDay(filterPastEventsForToday(events, dayKey, now), dayKey, now)
+}
+
 // Always six rows of seven days. A fixed grid keeps the popup exactly the
 // same height in every month, so stepping through the year never makes the
 // panel jump under the pointer.
@@ -286,6 +498,13 @@ if (typeof module !== "undefined") {
     parseLifeExpectancy: parseLifeExpectancy,
     lifeProgress: lifeProgress,
     lifeProgressPercent: lifeProgressPercent,
+    visibleGridRange: visibleGridRange,
+    indexEventsByDay: indexEventsByDay,
+    eventsForDay: eventsForDay,
+    eventDotSummary: eventDotSummary,
+    filterPastEventsForToday: filterPastEventsForToday,
+    sortEventsForDay: sortEventsForDay,
+    barEventsForDay: barEventsForDay,
     monthGrid: monthGrid,
     stepMonth: stepMonth,
     clockFormats: clockFormats,
