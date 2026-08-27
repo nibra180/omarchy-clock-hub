@@ -6,7 +6,7 @@ Item {
   id: root
 
   property bool running: false
-  property string variant: "Vinyl"
+  property string variant: "Equalizer"
   property color foreground: Color.foreground
   property color accent: Color.accent
   property real size: Style.space(16)
@@ -17,7 +17,7 @@ Item {
   Item {
     id: record
     anchors.fill: parent
-    visible: root.variant !== "Equalizer" && root.variant !== "Pulse"
+    visible: root.variant === "Vinyl"
 
     Rectangle {
       id: outerRing

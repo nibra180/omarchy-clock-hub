@@ -21,7 +21,7 @@
       "showMedia": true,
       "showAgents": true,
       "showSystemStatus": true,
-      "mediaIndicatorStyle": "Vinyl"
+      "mediaIndicatorStyle": "Equalizer"
     },
     "schema": [
       {
@@ -55,7 +55,7 @@
           "Pulse"
         ],
         "description": "Choose the animated media indicator shown beside the clock while audio is playing.",
-        "defaultValue": "Vinyl"
+        "defaultValue": "Equalizer"
       }
     ]
   },

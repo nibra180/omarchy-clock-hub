@@ -66,7 +66,7 @@ and persist in `shell.json`.
 Disabling Media also removes the now-playing indicator and tooltip from the
 bar. The calendar and optional life-progress feature remain available.
 
-The bar indicator defaults to Vinyl. Choose Vinyl, Equalizer, or Pulse from the
+The bar indicator defaults to Equalizer. Choose Vinyl, Equalizer, or Pulse from the
 same hub settings menu. You can also script settings with `omarchy bar set`.
 
 ## Optional upstream notifications

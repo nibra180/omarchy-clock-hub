@@ -10,7 +10,7 @@ BorderSurface {
   property bool mediaEnabled: true
   property bool agentsEnabled: true
   property bool systemStatusEnabled: true
-  property string indicatorStyle: "Vinyl"
+  property string indicatorStyle: "Equalizer"
   property int cursor: -1
   property color foreground: Color.foreground
   property string fontFamily: Style.font.family

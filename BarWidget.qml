@@ -28,8 +28,8 @@ BarWidget {
   readonly property var formatRing: Model.clockFormatRing(configuredFormat, configuredAltFormat, Model.clockFormats(vertical))
   readonly property bool showMedia: setting("showMedia", true) === true
   readonly property string mediaIndicatorStyle: {
-    var value = String(setting("mediaIndicatorStyle", "Vinyl"))
-    return value === "Equalizer" || value === "Pulse" ? value : "Vinyl"
+    var value = String(setting("mediaIndicatorStyle", "Equalizer"))
+    return value === "Vinyl" || value === "Pulse" ? value : "Equalizer"
   }
 
   // What the bar shows is what shell.json stores, so a cycled format is the

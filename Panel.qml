@@ -63,8 +63,8 @@ Panel {
   readonly property bool showAgents: setting("showAgents", true) === true
   readonly property bool showSystemStatus: setting("showSystemStatus", true) === true
   readonly property string mediaIndicatorStyle: {
-    var value = String(setting("mediaIndicatorStyle", "Vinyl"))
-    return value === "Equalizer" || value === "Pulse" ? value : "Vinyl"
+    var value = String(setting("mediaIndicatorStyle", "Equalizer"))
+    return value === "Vinyl" || value === "Pulse" ? value : "Equalizer"
   }
   property bool editingLife: false
   property bool quickSettingsOpen: false
