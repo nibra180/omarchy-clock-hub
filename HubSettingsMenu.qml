@@ -2,7 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// Compact, in-panel mirror of the manifest-backed section settings.
+// Compact, in-panel mirror of the manifest-backed widget settings.
 // The caller owns persistence; this surface only presents the current state.
 BorderSurface {
   id: root
@@ -10,6 +10,7 @@ BorderSurface {
   property bool mediaEnabled: true
   property bool agentsEnabled: true
   property bool systemStatusEnabled: true
+  property string indicatorStyle: "Equalizer"
   property int cursor: -1
   property color foreground: Color.foreground
   property string fontFamily: Style.font.family
@@ -17,8 +18,9 @@ BorderSurface {
   signal mediaToggled()
   signal agentsToggled()
   signal systemStatusToggled()
+  signal indicatorStyleSelected(string style)
 
-  readonly property int rowCount: 3
+  readonly property int rowCount: 4
 
   implicitWidth: Style.space(250)
   implicitHeight: menuColumn.implicitHeight + Style.space(28)
@@ -35,6 +37,13 @@ BorderSurface {
     if (cursor === 0) root.mediaToggled()
     else if (cursor === 1) root.agentsToggled()
     else if (cursor === 2) root.systemStatusToggled()
+    else if (cursor === 3) root.moveIndicator(1)
+  }
+
+  function moveIndicator(delta) {
+    var current = indicatorGroup.selectedOptionIndex()
+    var next = ((current < 0 ? 0 : current) + delta + indicatorGroup.options.length) % indicatorGroup.options.length
+    root.indicatorStyleSelected(indicatorGroup.optionValue(indicatorGroup.options[next]))
   }
 
   onVisibleChanged: if (!visible) cursor = -1
@@ -98,6 +107,31 @@ BorderSurface {
       hasCursor: root.cursor === 2
       onHovered: function(isHovered) { if (isHovered) root.cursor = 2 }
       onClicked: root.systemStatusToggled()
+    }
+
+    Text {
+      width: parent.width
+      topPadding: Style.space(7)
+      text: "NOW-PLAYING INDICATOR"
+      color: Qt.darker(root.foreground, 1.5)
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+      font.letterSpacing: 1
+      font.bold: true
+    }
+
+    ButtonGroup {
+      id: indicatorGroup
+      options: ["Vinyl", "Equalizer", "Pulse"]
+      value: root.indicatorStyle
+      foreground: root.foreground
+      background: Color.popups.background
+      fontFamily: root.fontFamily
+      fontSize: Style.font.bodySmall
+      focusable: false
+      cursorIndex: root.cursor === 3 ? selectedOptionIndex() : -1
+      onHovered: function(index, isHovered) { if (isHovered) root.cursor = 3 }
+      onChanged: function(value) { root.indicatorStyleSelected(value) }
     }
   }
 }

@@ -67,7 +67,7 @@ test("section settings stay aligned across manifest and panel", () => {
   const schema = Object.fromEntries(manifest.barWidget.schema.map((item) => [item.key, item]))
   const keys = ["showMedia", "showAgents", "showSystemStatus"]
 
-  assert.deepEqual(Object.keys(manifest.barWidget.defaults).sort(), keys.slice().sort())
+  assert.deepEqual(Object.keys(manifest.barWidget.defaults).sort(), [...keys, "mediaIndicatorStyle"].sort())
   for (const key of keys) {
     assert.equal(manifest.barWidget.defaults[key], true)
     assert.equal(schema[key].type, "boolean")
@@ -85,4 +85,26 @@ test("section settings stay aligned across manifest and panel", () => {
   assert.match(panel, /panelOpen:\s*root\.opened && root\.showMedia/)
   assert.match(panel, /panelOpen:\s*root\.opened && root\.showAgents/)
   assert.match(panel, /running:\s*root\.opened && root\.showSystemStatus/)
+})
+
+test("now-playing indicator styles stay aligned across manifest and bar widget", () => {
+  const manifest = JSON.parse(read("manifest.json"))
+  const barWidget = read("BarWidget.qml")
+  const panel = read("Panel.qml")
+  const indicator = read("VinylIndicator.qml")
+  const setting = manifest.barWidget.schema.find((item) => item.key === "mediaIndicatorStyle")
+
+  assert.equal(manifest.barWidget.defaults.mediaIndicatorStyle, "Equalizer")
+  assert.equal(setting.type, "enum")
+  assert.deepEqual(setting.options, ["Vinyl", "Equalizer", "Pulse"])
+  assert.equal(setting.defaultValue, "Equalizer")
+  assert.match(barWidget, /setting\("mediaIndicatorStyle", "Equalizer"\)/)
+  assert.match(barWidget, /variant:\s*root\.mediaIndicatorStyle/)
+  assert.match(panel, /setting\("mediaIndicatorStyle", "Equalizer"\)/)
+  assert.match(panel, /indicatorStyle:\s*root\.mediaIndicatorStyle/)
+  assert.match(panel, /persistSettings\(\{ mediaIndicatorStyle: style \}\)/)
+  assert.match(panel, /onIndicatorStyleSelected:/)
+  assert.match(indicator, /property string variant:\s*"Equalizer"/)
+  assert.match(indicator, /root\.variant === "Equalizer"/)
+  assert.match(indicator, /root\.variant === "Pulse"/)
 })
