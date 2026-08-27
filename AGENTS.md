@@ -55,11 +55,12 @@ system status. The repository has no package manager or build step.
 Run the relevant checks before reporting completion:
 
 ```bash
-qmllint -I /usr/share/omarchy/shell ./*.qml
+node --test test/*.test.js
+qmllint -I /usr/share/omarchy/shell AgentsHub.qml HubSettingsMenu.qml MediaHub.qml Panel.qml SystemStatus.qml VinylIndicator.qml
 omarchy plugin validate ~/.config/omarchy/plugins/io.github.nibra180.clock-hub
 ```
 
 For shell-script changes, also run `bash -n` on each changed script and
-`shellcheck` when it is installed. There is currently no automated test suite
-in this repository. Use `omarchy restart shell` for manual UI verification and
-state exactly which checks you ran.
+`shellcheck` when it is installed. Add or update `test/*.test.js` coverage when
+changing `Model.js` or a tested host-shell contract. Use `omarchy restart shell`
+for manual UI verification and state exactly which checks you ran.
