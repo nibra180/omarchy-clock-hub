@@ -49,6 +49,17 @@ test("hub reuses mounted media and agents providers", () => {
   assert.match(panel, /moduleWidgets\("omarchy\.agents"\)/)
 })
 
+test("agent model usage mirrors the mounted Agents panel", () => {
+  const source = read("AgentsHub.qml")
+
+  assert.match(source, /readonly property var models:[\s\S]*?agentsWidget\.models/)
+  assert.match(source, /text:\s*"TOKENS BY MODEL"/)
+  assert.match(source, /component ModelRow:/)
+  assert.match(source, /share:\s*modelData\.total \/ Math\.max\(1, root\.models\[0\]\.total\)/)
+  assert.match(source, /cache read/)
+  assert.match(source, /cache write/)
+})
+
 test("section settings stay aligned across manifest and panel", () => {
   const manifest = JSON.parse(read("manifest.json"))
   const barWidget = read("BarWidget.qml")

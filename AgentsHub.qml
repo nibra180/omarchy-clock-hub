@@ -20,6 +20,9 @@ Item {
   readonly property var orderedProviders: orderedProviderList(providers)
   readonly property var provider: agentsWidget ? agentsWidget.provider : null
   readonly property var limits: agentsWidget ? agentsWidget.limits : []
+  readonly property var models: agentsWidget && "models" in agentsWidget
+    ? agentsWidget.models
+    : modelRows()
   readonly property var balance: provider ? (provider.balance || null) : null
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property color urgent: bar ? bar.urgent : Color.urgent
@@ -138,19 +141,63 @@ Item {
     return text
   }
 
+  function modelWordCase(word) {
+    if (word === "gpt") return "GPT"
+    if (word === "deepseek") return "DeepSeek"
+    return word.charAt(0).toUpperCase() + word.slice(1)
+  }
+
+  function friendlyModelName(id) {
+    if (!id) return "Unknown"
+    var name = String(id).replace(/^claude-/, "").replace(/-\d{8}$/, "")
+    var parts = name.split("-")
+    var words = []
+    var version = []
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i]
+      if (part === "") continue
+      if (/^\d/.test(part)) {
+        version.push(part)
+        continue
+      }
+      if (version.length > 0) {
+        words.push(version.join("."))
+        version = []
+      }
+      words.push(modelWordCase(part))
+    }
+    if (version.length > 0) words.push(version.join("."))
+    return words.length > 0 ? words.join(" ") : "Unknown"
+  }
+
   function modelRows() {
     var source = provider ? (provider.modelUsage || {}) : {}
     var rows = []
     for (var id in source) {
       var item = source[id] || {}
+      var input = Number(item.inputTokens || 0)
+      var output = Number(item.outputTokens || 0)
+      var cacheRead = Number(item.cacheReadInputTokens || 0)
+      var cacheWrite = Number(item.cacheCreationInputTokens || 0)
       rows.push({
-        name: id,
-        total: Number(item.inputTokens || 0) + Number(item.outputTokens || 0)
-          + Number(item.cacheReadInputTokens || 0) + Number(item.cacheCreationInputTokens || 0)
+        name: friendlyModelName(id),
+        total: input + output + cacheRead + cacheWrite,
+        input: input,
+        output: output,
+        cacheRead: cacheRead,
+        cacheWrite: cacheWrite
       })
     }
     rows.sort(function(a, b) { return b.total - a.total })
     return rows.slice(0, 4)
+  }
+
+  function modelTooltip(row) {
+    if (!row) return ""
+    return "In " + formatTokenCount(row.input)
+      + " · out " + formatTokenCount(row.output)
+      + " · cache read " + formatTokenCount(row.cacheRead)
+      + " · cache write " + formatTokenCount(row.cacheWrite)
   }
 
   function orderedProviderList(source) {
@@ -600,45 +647,32 @@ Item {
         }
       }
 
-      Column {
-        readonly property var rows: root.modelRows()
-        visible: rows.length > 0
-        width: parent.width
-        spacing: Style.space(6)
+      PanelSeparator {
+        visible: modelSection.visible
+        foreground: root.foreground
+      }
 
-        Text {
-          text: "TOP MODELS"
-          color: root.dim
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.caption
-          font.bold: true
-          font.letterSpacing: 1
+      Column {
+        id: modelSection
+        visible: root.models.length > 0
+        width: parent.width
+        spacing: Style.spacing.md
+
+        PanelSectionHeader {
+          width: parent.width
+          text: "TOKENS BY MODEL"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
         }
 
         Repeater {
-          model: parent.rows
+          model: root.models
 
-          Row {
+          ModelRow {
             required property var modelData
-            width: parent.width
-
-            Text {
-              width: parent.width * 0.7
-              text: modelData.name
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-              elide: Text.ElideMiddle
-            }
-
-            Text {
-              width: parent.width * 0.3
-              text: root.formatTokenCount(modelData.total)
-              color: root.dim
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-              horizontalAlignment: Text.AlignRight
-            }
+            width: modelSection.width
+            row: modelData
+            share: modelData.total / Math.max(1, root.models[0].total)
           }
         }
       }
@@ -647,6 +681,68 @@ Item {
 
   // Kept structurally identical to omarchy.agents so daily usage reads the
   // same here and in the stock panel.
+  component ModelRow: Item {
+    id: modelRow
+    property var row: null
+    property real share: 0
+
+    implicitHeight: modelName.implicitHeight + Style.spacing.lg
+
+    Rectangle {
+      anchors.fill: parent
+      radius: Style.cornerRadius
+      color: root.alpha(root.foreground, 0.05)
+    }
+
+    Rectangle {
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      width: parent.width * root.clamp(modelRow.share, 0, 1)
+      radius: Style.cornerRadius
+      color: root.alpha(root.foreground, 0.14)
+    }
+
+    Text {
+      id: modelName
+      text: modelRow.row ? modelRow.row.name : ""
+      color: root.foreground
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.bodySmall
+      elide: Text.ElideRight
+      anchors.left: parent.left
+      anchors.leftMargin: Style.space(8)
+      anchors.right: modelTokens.left
+      anchors.rightMargin: Style.space(8)
+      anchors.verticalCenter: parent.verticalCenter
+    }
+
+    Text {
+      id: modelTokens
+      text: modelRow.row ? root.formatTokenCount(modelRow.row.total) : ""
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.bodySmall
+      font.bold: true
+      anchors.right: parent.right
+      anchors.rightMargin: Style.space(8)
+      anchors.verticalCenter: parent.verticalCenter
+    }
+
+    MouseArea {
+      id: modelHover
+      anchors.fill: parent
+      hoverEnabled: true
+      acceptedButtons: Qt.NoButton
+    }
+
+    PanelToolTip {
+      visible: modelHover.containsMouse
+      text: root.modelTooltip(modelRow.row)
+      fontFamily: root.fontFamily
+    }
+  }
+
   component DayRow: Item {
     id: dayRow
     property var day: null
