@@ -62,6 +62,10 @@ Panel {
   readonly property bool showMedia: setting("showMedia", true) === true
   readonly property bool showAgents: setting("showAgents", true) === true
   readonly property bool showSystemStatus: setting("showSystemStatus", true) === true
+  readonly property string mediaIndicatorStyle: {
+    var value = String(setting("mediaIndicatorStyle", "Vinyl"))
+    return value === "Equalizer" || value === "Pulse" ? value : "Vinyl"
+  }
   property bool editingLife: false
   property bool quickSettingsOpen: false
 
@@ -180,6 +184,11 @@ Panel {
     var values = {}
     values[key] = !enabled
     persistSettings(values)
+  }
+
+  function setMediaIndicatorStyle(style) {
+    if (style !== "Vinyl" && style !== "Equalizer" && style !== "Pulse") return
+    persistSettings({ mediaIndicatorStyle: style })
   }
 
   function openQuickSettings() {
@@ -305,6 +314,7 @@ Panel {
       blocked: root.editingLife
       onMoveRequested: function(dx, dy) {
         if (root.quickSettingsOpen) {
+          if (dx !== 0 && quickSettingsMenu.cursor === 3) quickSettingsMenu.moveIndicator(dx)
           if (dy !== 0) quickSettingsMenu.moveCursor(dy)
           return
         }
@@ -936,11 +946,13 @@ Panel {
           mediaEnabled: root.showMedia
           agentsEnabled: root.showAgents
           systemStatusEnabled: root.showSystemStatus
+          indicatorStyle: root.mediaIndicatorStyle
           foreground: root.contentForeground
           fontFamily: root.contentFontFamily
           onMediaToggled: root.toggleSection("showMedia", root.showMedia)
           onAgentsToggled: root.toggleSection("showAgents", root.showAgents)
           onSystemStatusToggled: root.toggleSection("showSystemStatus", root.showSystemStatus)
+          onIndicatorStyleSelected: function(style) { root.setMediaIndicatorStyle(style) }
         }
       }
     }

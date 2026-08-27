@@ -20,7 +20,8 @@
     "defaults": {
       "showMedia": true,
       "showAgents": true,
-      "showSystemStatus": true
+      "showSystemStatus": true,
+      "mediaIndicatorStyle": "Vinyl"
     },
     "schema": [
       {
@@ -43,6 +44,18 @@
         "label": "System status",
         "description": "Show CPU, memory, disk usage, and the btop shortcut.",
         "defaultValue": true
+      },
+      {
+        "key": "mediaIndicatorStyle",
+        "type": "enum",
+        "label": "Now-playing indicator",
+        "options": [
+          "Vinyl",
+          "Equalizer",
+          "Pulse"
+        ],
+        "description": "Choose the animated media indicator shown beside the clock while audio is playing.",
+        "defaultValue": "Vinyl"
       }
     ]
   },

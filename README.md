@@ -8,7 +8,7 @@ a compact desktop hub.
 ## Features
 
 - Configurable weekday, ISO week, date, and time label
-- Animated, theme-aware now-playing indicator in the bar
+- Animated, theme-aware now-playing indicator with Vinyl, Equalizer, and Pulse styles
 - Full Omarchy calendar with week numbers and month navigation
 - Optional year- and life-progress bars above the calendar
 - MPRIS media card with clickable artwork, progress, and playback controls
@@ -58,13 +58,16 @@ Add or adjust the Clock Hub entry in `~/.config/omarchy/shell.json`:
 Right-clicking the clock cycles through the available formats. Left-clicking
 opens the hub; middle-clicking opens Omarchy's timezone picker.
 
-## Configurable sections
+## Widget settings
 
-Media, Agents, and System Status are enabled by default. Toggle them from
-Omarchy's widget settings or from the settings button in the calendar's
-upper-right corner. Changes apply immediately and persist in `shell.json`.
+Media, Agents, and System Status are enabled by default. Toggle them from the
+settings button in the calendar's upper-right corner. Changes apply immediately
+and persist in `shell.json`.
 Disabling Media also removes the now-playing indicator and tooltip from the
 bar. The calendar and optional life-progress feature remain available.
+
+The bar indicator defaults to Vinyl. Choose Vinyl, Equalizer, or Pulse from the
+same hub settings menu. You can also script settings with `omarchy bar set`.
 
 ## Optional upstream notifications
 

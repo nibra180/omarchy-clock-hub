@@ -27,6 +27,10 @@ BarWidget {
 
   readonly property var formatRing: Model.clockFormatRing(configuredFormat, configuredAltFormat, Model.clockFormats(vertical))
   readonly property bool showMedia: setting("showMedia", true) === true
+  readonly property string mediaIndicatorStyle: {
+    var value = String(setting("mediaIndicatorStyle", "Vinyl"))
+    return value === "Equalizer" || value === "Pulse" ? value : "Vinyl"
+  }
 
   // What the bar shows is what shell.json stores, so a cycled format is the
   // format from then on rather than something that reverts on restart.
@@ -181,6 +185,7 @@ BarWidget {
         anchors.verticalCenter: parent.verticalCenter
         visible: root.mediaPlaying
         running: root.mediaPlaying
+        variant: root.mediaIndicatorStyle
         foreground: button.foreground
         accent: Color.accent
       }
