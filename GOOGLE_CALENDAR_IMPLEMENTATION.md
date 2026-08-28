@@ -102,14 +102,13 @@ tested with Node.
 - [x] Run qmllint and plugin validation.
 - [x] Run a shell smoke test with the missing-client state.
 - [x] Complete a focused subagent security review and fix its high/medium findings.
-- [ ] Test live OAuth in the default browser when the client file is available.
+- [x] Test live OAuth in the default browser with the private Desktop client.
 
 ## Current blockers
 
-- The OAuth client file is not present yet at the agreed path. The Google Cloud
-  credentials page has been opened in the default browser. Live login, event
-  retrieval, token refresh, and revoke testing require the downloaded Desktop
-  client JSON at that path.
+- The private Google Desktop OAuth client is installed at the agreed path with
+  mode `0600`. The Google project remains in `Testing`, with the owner account
+  registered as a test user.
 
 ## Validation progress
 
@@ -122,8 +121,17 @@ tested with Node.
   findings were fixed by classifying auth failures as reconnectable, hardening
   process lifecycle generations, bounding the range cache, and validating the
   helper's date span.
-- Visual smoke test: event rail renders full width and reports the missing OAuth
-  client without breaking Media, Calendar, Agents, or System Status.
+- Visual smoke test: event rail renders full width without breaking Media,
+  Calendar, Agents, or System Status.
+- Live OAuth PKCE login: passed in Brave using the loopback callback.
+- Live primary-calendar fetch: passed with 28 records in the current 42-day
+  range; event titles were not printed during CLI validation.
+- Live UI: current-day selection, all-day event text, event dots, empty states,
+  and fixed-height rail render correctly.
+- Keyboard smoke test: Left moved to the previous month, selected its first day,
+  and loaded that day's event row.
+- Live disconnect/reconnect: Google revocation, local Secret Service deletion,
+  reauthorization, and a second 28-record fetch all passed.
 
 ## Validation commands
 
