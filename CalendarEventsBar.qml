@@ -142,8 +142,8 @@ BorderSurface {
 
   Item {
     anchors.fill: parent
-    anchors.leftMargin: Style.spacing.controlPaddingX
-    anchors.rightMargin: Style.spacing.sm
+    anchors.leftMargin: Style.spacing.xxxl
+    anchors.rightMargin: Style.spacing.xxxl
     anchors.topMargin: Style.spacing.sm
     anchors.bottomMargin: Style.spacing.sm
 
@@ -231,17 +231,13 @@ BorderSurface {
         onClicked: root.reconnectRequested()
       }
 
-      Button {
+      PanelActionButton {
         visible: !root.connectState && !root.reconnectState
           && !root.keyringState && !root.disconnectingState
-        iconText: "󰑐"
+        iconText: "󰑓"
         tooltipText: root.refreshing ? "Refreshing calendar" : "Refresh calendar"
         foreground: root.foreground
         fontFamily: root.fontFamily
-        iconSize: Style.font.icon
-        horizontalPadding: Style.spacing.sm
-        verticalPadding: Style.spacing.sm
-        iconSpinning: root.refreshing || root.loadingState
         enabled: !root.refreshing && !root.loadingState
         onClicked: root.refreshRequested()
       }

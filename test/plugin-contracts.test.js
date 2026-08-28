@@ -128,6 +128,9 @@ test("calendar keyboard navigation and event presentation stay aligned", () => {
   assert.match(eventBar, /if \(event && event\.allDay === true\) return ""/)
   assert.match(eventBar, /id:\s*eventSeparator/)
   assert.match(eventBar, /required property int index/)
+  assert.match(eventBar, /anchors\.leftMargin:\s*Style\.spacing\.xxxl/)
+  assert.match(eventBar, /anchors\.rightMargin:\s*Style\.spacing\.xxxl/)
+  assert.match(eventBar, /PanelActionButton\s*{[\s\S]*?Refresh calendar/)
   assert.doesNotMatch(eventBar, /return "ALL DAY"/)
 })
 
