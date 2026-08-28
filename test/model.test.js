@@ -327,6 +327,8 @@ test("stepDay crosses month, year, leap-day, and DST boundaries", () => {
   assert.deepEqual(Model.stepDay(2028, 1, 28, 1), { year: 2028, month: 1, day: 29 })
   assert.deepEqual(Model.stepDay(2028, 1, 29, 1), { year: 2028, month: 2, day: 1 })
   assert.deepEqual(Model.stepDay(2026, 2, 8, 1), { year: 2026, month: 2, day: 9 })
+  assert.deepEqual(Model.stepDay(2026, 7, 3, -7), { year: 2026, month: 6, day: 27 })
+  assert.deepEqual(Model.stepDay(2026, 7, 28, 7), { year: 2026, month: 8, day: 4 })
 })
 
 test("stepMonth crosses year boundaries in both directions", () => {

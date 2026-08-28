@@ -362,7 +362,7 @@ Panel {
           return
         }
         if (dx !== 0) root.moveDay(dx)
-        if (dy !== 0) root.moveMonth(dy)
+        if (dy !== 0) root.moveDay(dy * 7)
       }
       onActivateRequested: {
         if (root.quickSettingsOpen) quickSettingsMenu.activateCursor()

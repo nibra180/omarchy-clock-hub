@@ -14,7 +14,7 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 ### Changed
 
-- Calendar arrow keys now move by day horizontally and by month vertically.
+- Calendar arrow keys move by one day horizontally and one week vertically.
 - Calendar event entries use hairline separators instead of individual boxes, and all-day entries show only their title.
 
 ## [1.0.0] - 2026-08-26

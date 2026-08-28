@@ -43,8 +43,8 @@ and keeps event data in memory only.
 - Timed events use the desktop time zone. All-day values remain calendar dates.
 - Entries are display-only in the MVP and use hairline separators rather than
   individual boxes.
-- Left and Right select adjacent days across month boundaries. Up and Down move
-  to the previous or next month and select its first day.
+- Left and Right select adjacent days. Up and Down select the same weekday in
+  the previous or next week. Both follow the date across month boundaries.
 - Network errors retain last-good RAM data and show its age. Auth failures clear
   event data and require reconnect.
 - Disconnect revokes the Google token, clears keyring and RAM data, and leaves
@@ -132,8 +132,8 @@ tested with Node.
 - Live UI: current-day selection, all-day titles without a time label, event
   dots, empty states, hairline-separated entries, and the fixed-height rail
   render correctly.
-- Follow-up keyboard smoke test: Left and Right select adjacent days; Up selects
-  the first day of the previous month; Down selects the first day of the next.
+- Follow-up model and contract tests cover adjacent-day navigation with Left
+  and Right and seven-day navigation with Up and Down.
 - Hairline event layout renders correctly with horizontal and vertical bars,
   and with dark Miasma and light Catppuccin Latte themes.
 - Live disconnect/reconnect: Google revocation, local Secret Service deletion,

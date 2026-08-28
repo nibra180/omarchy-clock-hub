@@ -124,7 +124,7 @@ test("calendar keyboard navigation and event presentation stay aligned", () => {
 
   assert.match(panel, /function moveDay\(delta\)[\s\S]*?Model\.stepDay/)
   assert.match(panel, /if \(dx !== 0\) root\.moveDay\(dx\)/)
-  assert.match(panel, /if \(dy !== 0\) root\.moveMonth\(dy\)/)
+  assert.match(panel, /if \(dy !== 0\) root\.moveDay\(dy \* 7\)/)
   assert.match(eventBar, /if \(event && event\.allDay === true\) return ""/)
   assert.match(eventBar, /id:\s*eventSeparator/)
   assert.match(eventBar, /required property int index/)
