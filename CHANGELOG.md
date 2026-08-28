@@ -4,6 +4,8 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-28
+
 ### Added
 
 - Manifest-backed Media, Agents, and System Status toggles with an in-hub quick settings menu.
@@ -32,5 +34,6 @@ All notable changes to Omarchy Clock Hub are documented here.
 - Hyprland-derived corner rounding for the hub and album artwork.
 - Automatic upstream change detection and third-party attribution.
 
-[Unreleased]: https://github.com/nibra180/omarchy-clock-hub/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/nibra180/omarchy-clock-hub/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/nibra180/omarchy-clock-hub/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/nibra180/omarchy-clock-hub/releases/tag/v1.0.0
