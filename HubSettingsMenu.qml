@@ -10,6 +10,11 @@ BorderSurface {
   property bool mediaEnabled: true
   property bool agentsEnabled: true
   property bool systemStatusEnabled: true
+  property bool calendarEnabled: false
+  property bool calendarConnected: false
+  property bool calendarCanConnect: false
+  property string calendarState: "disabled"
+  property string calendarStatus: ""
   property string indicatorStyle: "Equalizer"
   property int cursor: -1
   property color foreground: Color.foreground
@@ -18,9 +23,13 @@ BorderSurface {
   signal mediaToggled()
   signal agentsToggled()
   signal systemStatusToggled()
+  signal calendarToggled()
+  signal calendarConnectRequested()
+  signal calendarDisconnectRequested()
   signal indicatorStyleSelected(string style)
 
-  readonly property int rowCount: 4
+  readonly property int indicatorRow: calendarEnabled ? 5 : 4
+  readonly property int rowCount: calendarEnabled ? 6 : 5
 
   implicitWidth: Style.space(250)
   implicitHeight: menuColumn.implicitHeight + Style.space(28)
@@ -37,7 +46,11 @@ BorderSurface {
     if (cursor === 0) root.mediaToggled()
     else if (cursor === 1) root.agentsToggled()
     else if (cursor === 2) root.systemStatusToggled()
-    else if (cursor === 3) root.moveIndicator(1)
+    else if (cursor === 3) root.calendarToggled()
+    else if (root.calendarEnabled && cursor === 4) {
+      if (root.calendarConnected) root.calendarDisconnectRequested()
+      else root.calendarConnectRequested()
+    } else if (cursor === root.indicatorRow) root.moveIndicator(1)
   }
 
   function moveIndicator(delta) {
@@ -109,6 +122,42 @@ BorderSurface {
       onClicked: root.systemStatusToggled()
     }
 
+    Toggle {
+      width: parent.width
+      activeFocusOnTab: false
+      label: "Google Calendar"
+      checked: root.calendarEnabled
+      foreground: root.foreground
+      fontFamily: root.fontFamily
+      titleSize: Style.font.body
+      hasCursor: root.cursor === 3
+      onHovered: function(isHovered) { if (isHovered) root.cursor = 3 }
+      onClicked: root.calendarToggled()
+    }
+
+    Button {
+      visible: root.calendarEnabled
+      width: parent.width
+      text: root.calendarConnected ? "Disconnect Google Calendar"
+        : (root.calendarState === "reauth_required" ? "Reconnect Google Calendar"
+          : (root.calendarState === "authorizing" ? "Connecting…"
+            : (root.calendarState === "disconnecting" ? "Disconnecting…"
+              : "Connect Google Calendar")))
+      tooltipText: root.calendarStatus
+      foreground: root.foreground
+      fontFamily: root.fontFamily
+      fontSize: Style.font.bodySmall
+      leftAlign: true
+      bordered: true
+      enabled: root.calendarConnected || root.calendarCanConnect
+      hasCursor: root.cursor === 4
+      onHovered: function(isHovered) { if (isHovered) root.cursor = 4 }
+      onClicked: {
+        if (root.calendarConnected) root.calendarDisconnectRequested()
+        else root.calendarConnectRequested()
+      }
+    }
+
     Text {
       width: parent.width
       topPadding: Style.space(7)
@@ -129,8 +178,8 @@ BorderSurface {
       fontFamily: root.fontFamily
       fontSize: Style.font.bodySmall
       focusable: false
-      cursorIndex: root.cursor === 3 ? selectedOptionIndex() : -1
-      onHovered: function(index, isHovered) { if (isHovered) root.cursor = 3 }
+      cursorIndex: root.cursor === root.indicatorRow ? selectedOptionIndex() : -1
+      onHovered: function(index, isHovered) { if (isHovered) root.cursor = root.indicatorRow }
       onChanged: function(value) { root.indicatorStyleSelected(value) }
     }
   }

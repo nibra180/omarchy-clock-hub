@@ -26,7 +26,6 @@ Item {
   readonly property var balance: provider ? (provider.balance || null) : null
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property color urgent: bar ? bar.urgent : Color.urgent
-  readonly property color track: Style.selectedFillFor(foreground, Color.accent)
   readonly property bool alarming: agentsWidget ? agentsWidget.alarming : false
 
   implicitWidth: Style.space(380)
@@ -465,21 +464,14 @@ Item {
               }
             }
 
-            Rectangle {
+            ThemeProgressBar {
               width: parent.width
               height: Style.space(7)
-              radius: Style.cornerRadius > 0 ? height / 2 : 0
-              color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
-
-              Rectangle {
-                width: parent.width * root.clamp(Number(modelData.percent || 0), 0, 1)
-                height: parent.height
-                radius: parent.radius
-                color: Number(modelData.percent || 0) >= 0.9
-                  ? root.urgent
-                  : Style.selectedStateColor(root.foreground, Color.accent)
-                Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-              }
+              value: root.clamp(Number(modelData.percent || 0), 0, 1)
+              foreground: root.foreground
+              urgentColor: root.urgent
+              urgent: Number(modelData.percent || 0) >= 0.9
+              animationDuration: 220
             }
 
             Text {
@@ -688,19 +680,12 @@ Item {
 
     implicitHeight: modelName.implicitHeight + Style.spacing.lg
 
-    Rectangle {
+    ThemeProgressBar {
       anchors.fill: parent
-      radius: Style.cornerRadius
-      color: root.alpha(root.foreground, 0.05)
-    }
-
-    Rectangle {
-      anchors.left: parent.left
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      width: parent.width * root.clamp(modelRow.share, 0, 1)
-      radius: Style.cornerRadius
-      color: root.alpha(root.foreground, 0.14)
+      value: root.clamp(modelRow.share, 0, 1)
+      foreground: root.foreground
+      trackColor: root.alpha(root.foreground, 0.05)
+      animationDuration: 160
     }
 
     Text {
@@ -763,7 +748,7 @@ Item {
       width: Style.space(52)
     }
 
-    Rectangle {
+    ThemeProgressBar {
       id: dayTrack
       anchors.left: dayLabel.right
       anchors.right: dayValue.left
@@ -771,21 +756,10 @@ Item {
       anchors.rightMargin: Style.space(10)
       anchors.verticalCenter: parent.verticalCenter
       height: Math.max(Style.space(4), Math.round(Style.spacing.controlHeight * 0.14))
-      radius: height / 2
-      color: root.track
-
-      Rectangle {
-        anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        height: parent.height
-        radius: parent.radius
-        width: parent.width * root.clamp(dayRow.ratio, 0, 1)
-        color: dayRow.today ? root.foreground : root.alpha(root.foreground, 0.55)
-
-        Behavior on width {
-          NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-        }
-      }
+      value: root.clamp(dayRow.ratio, 0, 1)
+      foreground: root.foreground
+      trackColor: root.alpha(root.foreground, 0.05)
+      animationDuration: 160
     }
 
     Text {

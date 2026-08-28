@@ -4,11 +4,22 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-28
+
 ### Added
 
 - Manifest-backed Media, Agents, and System Status toggles with an in-hub quick settings menu.
 - Selectable Vinyl, Equalizer, and Pulse animations for the bar's now-playing indicator, including an in-hub picker.
 - Node tests for clock and calendar logic plus the Omarchy plugin contracts.
+- Optional read-only Google Calendar integration with OAuth PKCE, Secret Service token storage, selected-day event dots, and a full-width event rail.
+- Python helper tests for OAuth, credential storage, event filtering, pagination, and API failures.
+
+### Changed
+
+- Calendar arrow keys move by one day horizontally and one week vertically.
+- Calendar event entries use hairline separators instead of individual boxes, and all-day entries show only their title.
+- Calendar event rail edges have balanced padding, and refresh uses the shared panel action hover style.
+- Progress fills reuse each theme's active border gradient, with a flat accent fallback and preserved urgent states.
 
 ## [1.0.0] - 2026-08-26
 
@@ -23,5 +34,6 @@ All notable changes to Omarchy Clock Hub are documented here.
 - Hyprland-derived corner rounding for the hub and album artwork.
 - Automatic upstream change detection and third-party attribution.
 
-[Unreleased]: https://github.com/nibra180/omarchy-clock-hub/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/nibra180/omarchy-clock-hub/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/nibra180/omarchy-clock-hub/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/nibra180/omarchy-clock-hub/releases/tag/v1.0.0

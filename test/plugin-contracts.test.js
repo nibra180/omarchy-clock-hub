@@ -67,7 +67,10 @@ test("section settings stay aligned across manifest and panel", () => {
   const schema = Object.fromEntries(manifest.barWidget.schema.map((item) => [item.key, item]))
   const keys = ["showMedia", "showAgents", "showSystemStatus"]
 
-  assert.deepEqual(Object.keys(manifest.barWidget.defaults).sort(), [...keys, "mediaIndicatorStyle"].sort())
+  assert.deepEqual(
+    Object.keys(manifest.barWidget.defaults).sort(),
+    [...keys, "showGoogleCalendar", "mediaIndicatorStyle"].sort()
+  )
   for (const key of keys) {
     assert.equal(manifest.barWidget.defaults[key], true)
     assert.equal(schema[key].type, "boolean")
@@ -75,6 +78,12 @@ test("section settings stay aligned across manifest and panel", () => {
     assert.match(panel, new RegExp(`setting\\("${key}", true\\)`))
     assert.match(panel, new RegExp(`toggleSection\\("${key}"`))
   }
+
+  assert.equal(manifest.barWidget.defaults.showGoogleCalendar, false)
+  assert.equal(schema.showGoogleCalendar.type, "boolean")
+  assert.equal(schema.showGoogleCalendar.defaultValue, false)
+  assert.match(panel, /setting\("showGoogleCalendar", false\) === true/)
+  assert.match(panel, /toggleSection\("showGoogleCalendar"/)
 
   assert.equal(fs.existsSync(path.join(projectRoot, "HubSettingsMenu.qml")), true)
   assert.match(barWidget, new RegExp(`settingsEntryId:\\s*"${manifest.id.replace(/\./g, "\\.")}"`))
@@ -85,6 +94,55 @@ test("section settings stay aligned across manifest and panel", () => {
   assert.match(panel, /panelOpen:\s*root\.opened && root\.showMedia/)
   assert.match(panel, /panelOpen:\s*root\.opened && root\.showAgents/)
   assert.match(panel, /running:\s*root\.opened && root\.showSystemStatus/)
+})
+
+test("Google Calendar stays read-only and outside shell settings", () => {
+  const manifest = JSON.parse(read("manifest.json"))
+  const panel = read("Panel.qml")
+  const provider = read("GoogleCalendarProvider.qml")
+  const helper = read("tools/google-calendar-helper")
+  const settingsMenu = read("HubSettingsMenu.qml")
+
+  assert.equal(fs.existsSync(path.join(projectRoot, "CalendarEventsBar.qml")), true)
+  assert.equal(fs.existsSync(path.join(projectRoot, "GoogleCalendarProvider.qml")), true)
+  assert.equal(fs.existsSync(path.join(projectRoot, "tools/google-calendar-helper")), true)
+  assert.equal(manifest.barWidget.defaults.showGoogleCalendar, false)
+  assert.doesNotMatch(JSON.stringify(manifest), /refresh.?token|access.?token|client.?secret/i)
+  assert.match(provider, /panelOpen:\s*false/)
+  assert.match(provider, /running:\s*root\.enabled && root\.panelOpen && root\.authenticated/)
+  assert.match(panel, /GoogleCalendarProvider\s*{/)
+  assert.match(panel, /CalendarEventsBar\s*{/)
+  assert.match(settingsMenu, /signal calendarConnectRequested\(\)/)
+  assert.match(settingsMenu, /signal calendarDisconnectRequested\(\)/)
+  assert.match(helper, /calendar\.events\.readonly/)
+  assert.doesNotMatch(helper, /calendar\.events(?:["'])/)
+})
+
+test("calendar keyboard navigation and event presentation stay aligned", () => {
+  const panel = read("Panel.qml")
+  const eventBar = read("CalendarEventsBar.qml")
+
+  assert.match(panel, /function moveDay\(delta\)[\s\S]*?Model\.stepDay/)
+  assert.match(panel, /if \(dx !== 0\) root\.moveDay\(dx\)/)
+  assert.match(panel, /if \(dy !== 0\) root\.moveDay\(dy \* 7\)/)
+  assert.match(eventBar, /if \(event && event\.allDay === true\) return ""/)
+  assert.match(eventBar, /id:\s*eventSeparator/)
+  assert.match(eventBar, /required property int index/)
+  assert.match(eventBar, /anchors\.leftMargin:\s*Style\.spacing\.xxxl/)
+  assert.match(eventBar, /anchors\.rightMargin:\s*Style\.spacing\.xxxl/)
+  assert.match(eventBar, /PanelActionButton\s*{[\s\S]*?Refresh calendar/)
+  assert.doesNotMatch(eventBar, /return "ALL DAY"/)
+})
+
+test("hub progress bars reuse the active theme border gradient", () => {
+  const progress = read("ThemeProgressBar.qml")
+
+  assert.match(progress, /Border\.hyprlandActiveSpec\(Color\.accent, 0\)/)
+  assert.match(progress, /activeSpec\.gradient\.colors/)
+  assert.match(progress, /urgent \? \[urgentColor\] : themeColors/)
+
+  for (const file of ["Panel.qml", "SystemStatus.qml", "AgentsHub.qml", "MediaHub.qml"])
+    assert.match(read(file), /ThemeProgressBar\s*{/)
 })
 
 test("now-playing indicator styles stay aligned across manifest and bar widget", () => {

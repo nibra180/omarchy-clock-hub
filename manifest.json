@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.nibra180.clock-hub",
   "name": "Clock Hub",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Niklas Braun (nibra180)",
   "license": "MIT",
   "description": "Theme-aware clock hub with calendar, MPRIS media controls, and Omarchy Agents usage.",
@@ -21,6 +21,7 @@
       "showMedia": true,
       "showAgents": true,
       "showSystemStatus": true,
+      "showGoogleCalendar": false,
       "mediaIndicatorStyle": "Equalizer"
     },
     "schema": [
@@ -44,6 +45,13 @@
         "label": "System status",
         "description": "Show CPU, memory, disk usage, and the btop shortcut.",
         "defaultValue": true
+      },
+      {
+        "key": "showGoogleCalendar",
+        "type": "boolean",
+        "label": "Google Calendar",
+        "description": "Show read-only Google Calendar events in the hub.",
+        "defaultValue": false
       },
       {
         "key": "mediaIndicatorStyle",
