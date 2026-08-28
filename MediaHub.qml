@@ -193,23 +193,16 @@ Item {
       width: parent.width
       height: visible ? Style.space(24) : 0
 
-      Rectangle {
+      ThemeProgressBar {
         id: progressTrack
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
         height: Style.space(4)
-        radius: Style.cornerRadius > 0 ? height / 2 : 0
-        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
-
-        Rectangle {
-          height: parent.height
-          width: parent.width * Math.min(1, root.trackPosition / Math.max(1, root.trackLength))
-          radius: parent.radius
-          color: Style.selectedStateColor(root.foreground, Color.accent)
-
-          Behavior on width { NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-        }
+        value: Math.min(1, root.trackPosition / Math.max(1, root.trackLength))
+        foreground: root.foreground
+        trackColor: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
+        animationDuration: 450
       }
 
       Text {

@@ -134,6 +134,17 @@ test("calendar keyboard navigation and event presentation stay aligned", () => {
   assert.doesNotMatch(eventBar, /return "ALL DAY"/)
 })
 
+test("hub progress bars reuse the active theme border gradient", () => {
+  const progress = read("ThemeProgressBar.qml")
+
+  assert.match(progress, /Border\.hyprlandActiveSpec\(Color\.accent, 0\)/)
+  assert.match(progress, /activeSpec\.gradient\.colors/)
+  assert.match(progress, /urgent \? \[urgentColor\] : themeColors/)
+
+  for (const file of ["Panel.qml", "SystemStatus.qml", "AgentsHub.qml", "MediaHub.qml"])
+    assert.match(read(file), /ThemeProgressBar\s*{/)
+})
+
 test("now-playing indicator styles stay aligned across manifest and bar widget", () => {
   const manifest = JSON.parse(read("manifest.json"))
   const barWidget = read("BarWidget.qml")

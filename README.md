@@ -14,6 +14,7 @@ a compact desktop hub.
 - MPRIS media card with clickable artwork, progress, and playback controls
 - Omarchy Agents dashboard with provider limits, daily usage, and model totals
 - Live CPU, memory, and root-disk status with a btop shortcut
+- Theme-aware progress fills that reuse active border gradients when available
 - Manifest-backed toggles for Media, Agents, and System Status
 - Automatic upstream change detection after `omarchy update`
 

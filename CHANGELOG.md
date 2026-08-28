@@ -17,6 +17,7 @@ All notable changes to Omarchy Clock Hub are documented here.
 - Calendar arrow keys move by one day horizontally and one week vertically.
 - Calendar event entries use hairline separators instead of individual boxes, and all-day entries show only their title.
 - Calendar event rail edges have balanced padding, and refresh uses the shared panel action hover style.
+- Progress fills reuse each theme's active border gradient, with a flat accent fallback and preserved urgent states.
 
 ## [1.0.0] - 2026-08-26
 

@@ -138,6 +138,7 @@ Item {
   }
 
   component SystemMetric: Item {
+    id: metric
     property string label: ""
     property string icon: ""
     property real value: 0
@@ -181,24 +182,14 @@ Item {
       }
     }
 
-    Rectangle {
+    ThemeProgressBar {
       anchors.left: parent.left
       anchors.right: parent.right
       anchors.bottom: parent.bottom
       height: Style.space(7)
-      radius: Style.cornerRadius > 0 ? height / 2 : 0
-      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
-
-      Rectangle {
-        width: parent.width * root.clamp(value) / 100
-        height: parent.height
-        radius: parent.radius
-        color: Style.selectedStateColor(root.foreground, Color.accent)
-
-        Behavior on width {
-          NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
-        }
-      }
+      value: root.clamp(metric.value) / 100
+      foreground: root.foreground
+      animationDuration: 250
     }
   }
 }

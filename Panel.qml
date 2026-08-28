@@ -601,7 +601,7 @@ Panel {
                 font.pixelSize: Style.font.bodySmall
               }
 
-              Rectangle {
+              ThemeProgressBar {
                 id: yearTrack
                 visible: !root.editingLife
                 anchors.left: yearLabel.right
@@ -610,17 +610,9 @@ Panel {
                 anchors.rightMargin: Style.space(12)
                 anchors.verticalCenter: parent.verticalCenter
                 height: Style.space(6)
-                radius: Style.cornerRadius > 0 ? height / 2 : 0
-                color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.12)
-
-                Rectangle {
-                  width: Math.round(parent.width * root.yearDone)
-                  height: parent.height
-                  radius: parent.radius
-                  color: Style.selectedStateColor(root.contentForeground, Color.accent)
-
-                  Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-                }
+                value: root.yearDone
+                foreground: root.contentForeground
+                animationDuration: 160
               }
             }
           }
@@ -660,24 +652,16 @@ Panel {
                 font.pixelSize: Style.font.bodySmall
               }
 
-              Rectangle {
+              ThemeProgressBar {
                 anchors.left: lifeLabel.right
                 anchors.right: lifePercent.left
                 anchors.leftMargin: Style.space(12)
                 anchors.rightMargin: Style.space(12)
                 anchors.verticalCenter: parent.verticalCenter
                 height: Style.space(6)
-                radius: Style.cornerRadius > 0 ? height / 2 : 0
-                color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.12)
-
-                Rectangle {
-                  width: Math.round(parent.width * root.lifeDone)
-                  height: parent.height
-                  radius: parent.radius
-                  color: Style.selectedStateColor(root.contentForeground, Color.accent)
-
-                  Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-                }
+                value: root.lifeDone
+                foreground: root.contentForeground
+                animationDuration: 160
               }
 
               TapHandler {
