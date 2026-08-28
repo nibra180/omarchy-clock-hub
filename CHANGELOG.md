@@ -12,6 +12,11 @@ All notable changes to Omarchy Clock Hub are documented here.
 - Optional read-only Google Calendar integration with OAuth PKCE, Secret Service token storage, selected-day event dots, and a full-width event rail.
 - Python helper tests for OAuth, credential storage, event filtering, pagination, and API failures.
 
+### Changed
+
+- Calendar arrow keys now move by day horizontally and by month vertically.
+- Calendar event entries use hairline separators instead of individual boxes, and all-day entries show only their title.
+
 ## [1.0.0] - 2026-08-26
 
 ### Added

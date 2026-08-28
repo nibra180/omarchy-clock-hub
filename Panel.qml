@@ -163,6 +163,14 @@ Panel {
     root.selectedDate = new Date(today.getTime())
   }
 
+  function moveDay(delta) {
+    var next = Model.stepDay(selectedDate.getFullYear(), selectedDate.getMonth(),
+      selectedDate.getDate(), delta)
+    root.viewYear = next.year
+    root.viewMonth = next.month
+    root.selectedDate = new Date(next.year, next.month, next.day)
+  }
+
   function moveMonth(delta) {
     var next = Model.stepMonth(viewYear, viewMonth, delta)
     root.viewYear = next.year
@@ -353,8 +361,8 @@ Panel {
           if (dy !== 0) quickSettingsMenu.moveCursor(dy)
           return
         }
-        if (dx !== 0) root.moveMonth(dx)
-        if (dy !== 0) root.moveYear(dy)
+        if (dx !== 0) root.moveDay(dx)
+        if (dy !== 0) root.moveMonth(dy)
       }
       onActivateRequested: {
         if (root.quickSettingsOpen) quickSettingsMenu.activateCursor()

@@ -321,6 +321,14 @@ test("monthGrid respects Sunday starts and marks weekends", () => {
   assert.equal(firstWeek.week, 6)
 })
 
+test("stepDay crosses month, year, leap-day, and DST boundaries", () => {
+  assert.deepEqual(Model.stepDay(2026, 0, 1, -1), { year: 2025, month: 11, day: 31 })
+  assert.deepEqual(Model.stepDay(2026, 11, 31, 1), { year: 2027, month: 0, day: 1 })
+  assert.deepEqual(Model.stepDay(2028, 1, 28, 1), { year: 2028, month: 1, day: 29 })
+  assert.deepEqual(Model.stepDay(2028, 1, 29, 1), { year: 2028, month: 2, day: 1 })
+  assert.deepEqual(Model.stepDay(2026, 2, 8, 1), { year: 2026, month: 2, day: 9 })
+})
+
 test("stepMonth crosses year boundaries in both directions", () => {
   assert.deepEqual(Model.stepMonth(2026, 11, 1), { year: 2027, month: 0 })
   assert.deepEqual(Model.stepMonth(2026, 0, -1), { year: 2025, month: 11 })

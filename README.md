@@ -74,8 +74,14 @@ same hub settings menu. You can also script settings with `omarchy bar set`.
 
 Google Calendar support is disabled by default and reads only the primary
 calendar. Enabling it adds up to three event dots to each day and a full-width
-selected-day event rail above System Status. The rail shows at most three events;
-hover `+N` to inspect the remainder.
+selected-day event rail above System Status. The rail shows at most three events
+as plain entries separated by hairlines; hover `+N` to inspect the remainder.
+Timed entries show their start time and title, while all-day entries show only
+the title.
+
+With the hub focused, Left and Right select the previous or next day and follow
+that date across month boundaries. Up and Down switch to the previous or next
+month and select its first day.
 
 The integration uses the read-only
 `https://www.googleapis.com/auth/calendar.events.readonly` OAuth scope. Create a

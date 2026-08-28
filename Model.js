@@ -474,6 +474,15 @@ function monthGrid(year, month, weekStart, todayKey) {
   return weeks
 }
 
+function stepDay(year, month, day, delta) {
+  var target = utcCalendarDate(year, month, Number(day) + Number(delta))
+  return {
+    year: target.getUTCFullYear(),
+    month: target.getUTCMonth(),
+    day: target.getUTCDate()
+  }
+}
+
 function stepMonth(year, month, delta) {
   var target = new Date(year, Number(month) + Number(delta), 1)
   return { year: target.getFullYear(), month: target.getMonth() }
@@ -506,6 +515,7 @@ if (typeof module !== "undefined") {
     sortEventsForDay: sortEventsForDay,
     barEventsForDay: barEventsForDay,
     monthGrid: monthGrid,
+    stepDay: stepDay,
     stepMonth: stepMonth,
     clockFormats: clockFormats,
     clockFormatRing: clockFormatRing,

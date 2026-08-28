@@ -71,9 +71,15 @@ BorderSurface {
   }
 
   function eventTime(event) {
-    if (event && event.allDay === true) return "ALL DAY"
+    if (event && event.allDay === true) return ""
     var start = event && event.start !== undefined ? new Date(event.start) : new Date(NaN)
     return validDate(start) ? Qt.formatTime(start, Locale.ShortFormat) : "--:--"
+  }
+
+  function eventDisplayLine(event) {
+    var title = eventTitle(event).replace(/</g, "‹").replace(/>/g, "›")
+    var time = eventTime(event)
+    return time === "" ? title : time + "  " + title
   }
 
   function updateAge() {
@@ -120,8 +126,7 @@ BorderSurface {
   function overflowTooltip() {
     var lines = []
     for (var i = visibleEvents.length; i < eventList.length; i++)
-      lines.push(eventTime(eventList[i]) + "  "
-        + eventTitle(eventList[i]).replace(/</g, "‹").replace(/>/g, "›"))
+      lines.push(eventDisplayLine(eventList[i]))
 
     var unavailable = effectiveEventCount - eventList.length
     if (unavailable > 0) lines.push("+" + unavailable + " more")
@@ -269,51 +274,71 @@ BorderSurface {
         id: eventRow
         anchors.fill: parent
         visible: root.showEvents
-        spacing: Style.spacing.md
+        spacing: 0
 
         readonly property int slotCount: root.visibleEvents.length
-        readonly property int gapCount: Math.max(0, slotCount - 1) + (overflow.visible ? 1 : 0)
+        readonly property real separatorWidth: Style.spacing.hairline
+        readonly property int separatorCount: Math.max(0, slotCount - 1)
         readonly property real slotsWidth: Math.max(0,
-          width - overflow.width - gapCount * spacing)
+          width - overflow.width - separatorCount * separatorWidth)
+        readonly property real slotWidth: slotCount > 0 ? slotsWidth / slotCount : 0
 
         Repeater {
           model: root.visibleEvents
 
-          BorderSurface {
+          Item {
             required property var modelData
+            required property int index
 
-            width: eventRow.slotCount > 0 ? eventRow.slotsWidth / eventRow.slotCount : 0
+            width: eventRow.slotWidth + (index > 0 ? eventRow.separatorWidth : 0)
             height: eventRow.height
-            radius: Style.cornerRadius
-            color: Style.normalFillFor(root.foreground, Color.accent)
-            borderSpec: Border.controlSpec("normal", root.foreground, Color.accent)
             clip: true
 
-            Text {
-              id: eventTimeLabel
+            Rectangle {
+              id: eventSeparator
+              visible: parent.index > 0
               anchors.left: parent.left
-              anchors.leftMargin: Style.spacing.md
               anchors.verticalCenter: parent.verticalCenter
-              text: root.eventTime(modelData)
-              textFormat: Text.PlainText
-              color: Style.selectedStateColor(root.foreground, Color.accent)
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-              font.bold: true
+              width: eventRow.separatorWidth
+              height: Math.max(0, parent.height - 2 * Style.spacing.sm)
+              color: root.foreground
+              opacity: 0.14
             }
 
-            Text {
-              anchors.left: eventTimeLabel.right
-              anchors.leftMargin: Style.spacing.sm
+            Item {
+              id: eventContent
+              anchors.left: eventSeparator.visible ? eventSeparator.right : parent.left
               anchors.right: parent.right
-              anchors.rightMargin: Style.spacing.md
-              anchors.verticalCenter: parent.verticalCenter
-              text: root.eventTitle(modelData)
-              textFormat: Text.PlainText
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.bodySmall
-              elide: Text.ElideRight
+              anchors.top: parent.top
+              anchors.bottom: parent.bottom
+
+              Text {
+                id: eventTimeLabel
+                visible: text !== ""
+                anchors.left: parent.left
+                anchors.leftMargin: Style.spacing.md
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.eventTime(modelData)
+                textFormat: Text.PlainText
+                color: Style.selectedStateColor(root.foreground, Color.accent)
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+              }
+
+              Text {
+                anchors.left: eventTimeLabel.visible ? eventTimeLabel.right : parent.left
+                anchors.leftMargin: eventTimeLabel.visible ? Style.spacing.sm : Style.spacing.md
+                anchors.right: parent.right
+                anchors.rightMargin: Style.spacing.md
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.eventTitle(modelData)
+                textFormat: Text.PlainText
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                elide: Text.ElideRight
+              }
             }
           }
         }
@@ -321,11 +346,24 @@ BorderSurface {
         Item {
           id: overflow
           visible: root.overflowCount > 0
-          width: visible ? Style.space(34) : 0
+          width: visible ? Style.space(34) + eventRow.separatorWidth : 0
           height: eventRow.height
 
+          Rectangle {
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            width: eventRow.separatorWidth
+            height: Math.max(0, parent.height - 2 * Style.spacing.sm)
+            color: root.foreground
+            opacity: 0.14
+          }
+
           Text {
-            anchors.centerIn: parent
+            anchors.left: parent.left
+            anchors.leftMargin: eventRow.separatorWidth
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            horizontalAlignment: Text.AlignHCenter
             text: "+" + root.overflowCount
             textFormat: Text.PlainText
             color: overflowMouse.containsMouse

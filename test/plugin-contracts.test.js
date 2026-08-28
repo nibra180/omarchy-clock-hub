@@ -118,6 +118,19 @@ test("Google Calendar stays read-only and outside shell settings", () => {
   assert.doesNotMatch(helper, /calendar\.events(?:["'])/)
 })
 
+test("calendar keyboard navigation and event presentation stay aligned", () => {
+  const panel = read("Panel.qml")
+  const eventBar = read("CalendarEventsBar.qml")
+
+  assert.match(panel, /function moveDay\(delta\)[\s\S]*?Model\.stepDay/)
+  assert.match(panel, /if \(dx !== 0\) root\.moveDay\(dx\)/)
+  assert.match(panel, /if \(dy !== 0\) root\.moveMonth\(dy\)/)
+  assert.match(eventBar, /if \(event && event\.allDay === true\) return ""/)
+  assert.match(eventBar, /id:\s*eventSeparator/)
+  assert.match(eventBar, /required property int index/)
+  assert.doesNotMatch(eventBar, /return "ALL DAY"/)
+})
+
 test("now-playing indicator styles stay aligned across manifest and bar widget", () => {
   const manifest = JSON.parse(read("manifest.json"))
   const barWidget = read("BarWidget.qml")
