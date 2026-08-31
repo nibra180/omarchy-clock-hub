@@ -58,6 +58,14 @@ test("agent model usage mirrors the mounted Agents panel", () => {
   assert.match(source, /share:\s*modelData\.total \/ Math\.max\(1, root\.models\[0\]\.total\)/)
   assert.match(source, /cache read/)
   assert.match(source, /cache write/)
+
+  const modelRow = source.slice(
+    source.indexOf("component ModelRow:"),
+    source.indexOf("component DayRow:")
+  )
+  assert.doesNotMatch(modelRow, /ThemeProgressBar/)
+  assert.match(modelRow, /root\.alpha\(root\.foreground, 0\.05\)/)
+  assert.match(modelRow, /root\.alpha\(root\.foreground, 0\.14\)/)
 })
 
 test("section settings stay aligned across manifest and panel", () => {

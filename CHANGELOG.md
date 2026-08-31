@@ -4,6 +4,10 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Restored the stock Omarchy Agents fill for token-by-model rows to keep their labels readable.
+
 ## [1.0.1] - 2026-08-28
 
 ### Added

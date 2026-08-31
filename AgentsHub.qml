@@ -680,12 +680,23 @@ Item {
 
     implicitHeight: modelName.implicitHeight + Style.spacing.lg
 
-    ThemeProgressBar {
+    Rectangle {
       anchors.fill: parent
-      value: root.clamp(modelRow.share, 0, 1)
-      foreground: root.foreground
-      trackColor: root.alpha(root.foreground, 0.05)
-      animationDuration: 160
+      radius: Style.cornerRadius
+      color: root.alpha(root.foreground, 0.05)
+    }
+
+    Rectangle {
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      width: parent.width * root.clamp(modelRow.share, 0, 1)
+      radius: Style.cornerRadius
+      color: root.alpha(root.foreground, 0.14)
+
+      Behavior on width {
+        NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+      }
     }
 
     Text {
