@@ -11,6 +11,7 @@ Item {
   property var bar: null
   property var agentsWidget: null
   property bool panelOpen: false
+  property double nowMs: Date.now()
   property color foreground: Color.foreground
   property string fontFamily: Style.font.family
 
@@ -54,8 +55,10 @@ Item {
   }
 
   function resetText(limit) {
-    if (!limit || !limit.resetsAt) return ""
-    var delta = new Date(limit.resetsAt).getTime() - Date.now()
+    if (!limit) return ""
+    var resetAt = String(limit.resetAt || limit.resetsAt || "")
+    if (resetAt === "") return ""
+    var delta = new Date(resetAt).getTime() - root.nowMs
     if (!(delta > 0)) return "Resets now"
     var minutes = Math.floor(delta / 60000)
     var hours = Math.floor(minutes / 60)
@@ -252,9 +255,19 @@ Item {
 
   onAgentsWidgetChanged: selectMainProvider()
   onProvidersChanged: selectMainProvider()
-  onPanelOpenChanged: if (panelOpen) Qt.callLater(function() {
-    agentScroll.contentY = agentScroll.originY
-  })
+  onPanelOpenChanged: if (panelOpen) {
+    root.nowMs = Date.now()
+    Qt.callLater(function() {
+      agentScroll.contentY = agentScroll.originY
+    })
+  }
+
+  Timer {
+    interval: 30000
+    running: root.panelOpen
+    repeat: true
+    onTriggered: root.nowMs = Date.now()
+  }
 
   Flickable {
     id: agentScroll

@@ -58,6 +58,9 @@ test("agent model usage mirrors the mounted Agents panel", () => {
   assert.match(source, /share:\s*modelData\.total \/ Math\.max\(1, root\.models\[0\]\.total\)/)
   assert.match(source, /cache read/)
   assert.match(source, /cache write/)
+  assert.match(source, /limit\.resetAt \|\| limit\.resetsAt/)
+  assert.match(source, /interval:\s*30000/)
+  assert.match(source, /running:\s*root\.panelOpen/)
 
   const modelRow = source.slice(
     source.indexOf("component ModelRow:"),

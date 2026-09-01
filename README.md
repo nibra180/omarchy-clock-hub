@@ -12,7 +12,7 @@ a compact desktop hub.
 - Full Omarchy calendar with week numbers, month navigation, and optional read-only Google Calendar events
 - Optional year- and life-progress bars above the calendar
 - MPRIS media card with clickable artwork, progress, and playback controls
-- Omarchy Agents dashboard with provider limits, daily usage, and model totals
+- Omarchy Agents dashboard with provider limits, reset countdowns, daily usage, and model totals
 - Live CPU, memory, and root-disk status with a btop shortcut
 - Theme-aware progress fills, with stock Omarchy styling for readable model rows
 - Manifest-backed toggles for Media, Agents, and System Status
