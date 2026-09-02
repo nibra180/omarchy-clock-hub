@@ -8,6 +8,7 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 - Restored the stock Omarchy Agents fill for token-by-model rows to keep their labels readable.
 - Fixed missing agent limit reset countdowns and kept them current while the hub is open.
+- Documented calendar shortcuts, week start, life progress, vertical clock format, and the horizontal-only now-playing indicator.
 
 ## [1.0.1] - 2026-08-28
 
