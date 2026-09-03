@@ -77,6 +77,7 @@ test("number keys select the first two ordered agent providers", () => {
 
   assert.match(hub, /function selectProviderAt\(index\)/)
   assert.match(hub, /selectProvider\(orderedProviders\[index\]\)/)
+  assert.match(hub, /iconText: index < 2 \? String\(index \+ 1\) : ""/)
   assert.match(panel, /\(t === "1" \|\| t === "2"\) && root\.showAgents/)
   assert.match(panel, /agentsHub\.selectProviderAt\(Number\(t\) - 1\)/)
 })
@@ -229,6 +230,8 @@ test("the media carousel reuses the MPRIS service for every source", () => {
   // Carousel chrome appears only with something to switch between.
   assert.match(hub, /hasMultipleSources:\s*sources\.length > 1/)
   assert.match(hub, /id:\s*navRow[\s\S]*?visible:\s*root\.hasMultipleSources/)
+  assert.match(hub, /id:\s*dotsRow[\s\S]*?text:\s*"p"[\s\S]*?Repeater\s*{[\s\S]*?text:\s*"n"/)
+  assert.match(hub, /id:\s*dotsRow[\s\S]*?transform:\s*Translate\s*{ y: -Style\.space\(6\) }/)
   assert.match(hub, /id:\s*dotsRow[\s\S]*?visible:\s*root\.hasMultipleSources/)
 
   // No second collector or poller: one timer for the visible card's position.

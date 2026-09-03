@@ -291,6 +291,15 @@ Item {
       visible: root.hasMultipleSources
       anchors.horizontalCenter: parent.horizontalCenter
       spacing: Style.space(6)
+      transform: Translate { y: -Style.space(6) }
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: "p"
+        color: Qt.darker(root.foreground, 1.6)
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+      }
 
       Repeater {
         model: root.sources
@@ -327,6 +336,14 @@ Item {
             onClicked: root.focusSource(dot.index)
           }
         }
+      }
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: "n"
+        color: Qt.darker(root.foreground, 1.6)
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
       }
     }
   }

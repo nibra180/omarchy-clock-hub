@@ -4,6 +4,10 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Agent provider buttons and the media carousel now show their keyboard shortcuts, with extra space below the media controls.
+
 ## [1.1.0] - 2026-09-03
 
 ### Added

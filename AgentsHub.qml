@@ -344,7 +344,9 @@ Item {
 
           Button {
             required property var modelData
+            required property int index
             width: providerSwitch.cellWidth
+            iconText: index < 2 ? String(index + 1) : ""
             text: modelData.providerName
             selected: root.provider !== null
               && String(modelData.providerId || "") === String(root.provider.providerId || "")
@@ -352,6 +354,7 @@ Item {
             foreground: root.foreground
             fontFamily: root.fontFamily
             fontSize: Style.font.caption
+            iconSize: Style.font.caption
             horizontalPadding: Style.space(5)
             onClicked: root.selectProvider(modelData)
           }
