@@ -71,6 +71,16 @@ test("agent model usage mirrors the mounted Agents panel", () => {
   assert.match(modelRow, /root\.alpha\(root\.foreground, 0\.14\)/)
 })
 
+test("number keys select the first two ordered agent providers", () => {
+  const hub = read("AgentsHub.qml")
+  const panel = read("Panel.qml")
+
+  assert.match(hub, /function selectProviderAt\(index\)/)
+  assert.match(hub, /selectProvider\(orderedProviders\[index\]\)/)
+  assert.match(panel, /\(t === "1" \|\| t === "2"\) && root\.showAgents/)
+  assert.match(panel, /agentsHub\.selectProviderAt\(Number\(t\) - 1\)/)
+})
+
 test("section settings stay aligned across manifest and panel", () => {
   const manifest = JSON.parse(read("manifest.json"))
   const barWidget = read("BarWidget.qml")
@@ -152,7 +162,7 @@ test("hub progress bars reuse the active theme border gradient", () => {
   assert.match(progress, /activeSpec\.gradient\.colors/)
   assert.match(progress, /urgent \? \[urgentColor\] : themeColors/)
 
-  for (const file of ["Panel.qml", "SystemStatus.qml", "AgentsHub.qml", "MediaHub.qml"])
+  for (const file of ["Panel.qml", "SystemStatus.qml", "AgentsHub.qml", "MediaSourceCard.qml"])
     assert.match(read(file), /ThemeProgressBar\s*{/)
 })
 
@@ -176,4 +186,73 @@ test("now-playing indicator styles stay aligned across manifest and bar widget",
   assert.match(indicator, /property string variant:\s*"Equalizer"/)
   assert.match(indicator, /root\.variant === "Equalizer"/)
   assert.match(indicator, /root\.variant === "Pulse"/)
+})
+
+test("the media carousel reuses the MPRIS service for every source", () => {
+  const hub = read("MediaHub.qml")
+  const card = read("MediaSourceCard.qml")
+  const panel = read("Panel.qml")
+
+  // One card per source, addressed by key rather than by the service's own
+  // notion of an active player.
+  assert.match(hub, /mediaService\.sourcePlayers/)
+  assert.match(hub, /model:\s*root\.sources/)
+  assert.match(hub, /orientation:\s*ListView\.Horizontal/)
+  assert.match(hub, /snapMode:\s*ListView\.SnapOneItem/)
+  assert.match(card, /root\.actionRequested\(action\)/)
+  assert.match(hub, /mediaService\.runAction\(action, false, focusedKey\)/)
+  assert.match(hub, /onActionRequested: function\(action\) { root\.runActionOn\(index, action\) }/)
+
+  // Browsing stays local to the hub and never moves playback or changes the
+  // media service's preferred player.
+  assert.doesNotMatch(hub, /mediaService\.selectPlayer/)
+  assert.doesNotMatch(hub, /switchSource|\.play\(\)|\.pause\(\)/)
+
+  // Pausing a card must not move it. The order ignores playback state, every
+  // action pins the card it acted on, and a model rebuild restores the view
+  // without animating.
+  assert.match(hub, /Model\.orderedMediaSources\(mediaService\.sourcePlayers/)
+  assert.match(hub, /function runActionOn\(index, action\)[\s\S]*?focusedKey = mediaService\.playerKey\(player\)[\s\S]*?mediaService\.runAction/)
+  assert.match(hub, /var handled = mediaService\.runAction\(action, false, focusedKey\)/)
+  assert.match(hub, /if \(handled && \(action === "next" \|\| action === "previous"\)\) trackPosition = 0/)
+  assert.match(hub, /return handled/)
+  assert.match(hub, /function togglePlayPause\(\)\s*{\s*\n\s*return runActionOn\(focusedIndex, "playPause"\)/)
+  assert.match(hub, /onSourcesChanged: Qt\.callLater\(restoreCarousel\)/)
+  assert.match(hub, /function restoreCarousel\(\)[\s\S]*?positionViewAtIndex\(focusedIndex, ListView\.SnapPosition\)/)
+
+  // Swiping counts as picking a source only when the move began at the
+  // pointer; a programmatic reposition must not steal the focus.
+  assert.match(hub, /onDragStarted: root\.userMovingCarousel = true/)
+  assert.match(hub, /onFlickStarted: root\.userMovingCarousel = true/)
+  assert.match(hub, /onMovementEnded: {\s*\n\s*if \(!root\.userMovingCarousel\) return/)
+
+  // Carousel chrome appears only with something to switch between.
+  assert.match(hub, /hasMultipleSources:\s*sources\.length > 1/)
+  assert.match(hub, /id:\s*navRow[\s\S]*?visible:\s*root\.hasMultipleSources/)
+  assert.match(hub, /id:\s*dotsRow[\s\S]*?visible:\s*root\.hasMultipleSources/)
+
+  // No second collector or poller: one timer for the visible card's position.
+  assert.equal(hub.match(/\bTimer\s*{/g).length, 1)
+  assert.doesNotMatch(card, /\bTimer\s*{/)
+
+  assert.match(panel, /root\.showMedia\) mediaHub\.stepSource\(1\)/)
+  assert.match(panel, /root\.showMedia\) mediaHub\.stepSource\(-1\)/)
+})
+
+test("Space toggles the focused source while Enter still jumps to today", () => {
+  const hub = read("MediaHub.qml")
+  const panel = read("Panel.qml")
+
+  // Space and Enter both reach the panel as activateRequested. Telling them
+  // apart depends on Enter emitting returnRequested first, in the same key
+  // event, so both halves of that handshake have to stay in place.
+  assert.match(panel, /onReturnRequested:\s*root\.activateFromReturn = true/)
+  assert.match(panel, /var fromReturn = root\.activateFromReturn/)
+  assert.match(panel, /root\.activateFromReturn = false/)
+  assert.match(panel, /if \(fromReturn\) {\s*\n\s*root\.goToToday\(\)/)
+  assert.match(panel, /if \(!root\.showMedia \|\| !mediaHub\.togglePlayPause\(\)\) root\.goToToday\(\)/)
+
+  // The toggle addresses the card in view, not the service's active player,
+  // and goes through the same pinning path as the card buttons.
+  assert.match(hub, /function togglePlayPause\(\)\s*{\s*\n\s*return runActionOn\(focusedIndex, "playPause"\)/)
 })

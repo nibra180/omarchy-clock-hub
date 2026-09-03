@@ -336,3 +336,71 @@ test("stepMonth crosses year boundaries in both directions", () => {
   assert.deepEqual(Model.stepMonth(2026, 0, -1), { year: 2025, month: 11 })
   assert.deepEqual(Model.stepMonth(2026, 5, 18), { year: 2027, month: 11 })
 })
+
+function mprisPlayer(overrides) {
+  return Object.assign({
+    trackTitle: "",
+    trackArtist: "",
+    identity: "",
+    desktopEntry: "",
+    dbusName: ""
+  }, overrides)
+}
+
+test("media source labels prefer the track title over app identity", () => {
+  assert.equal(Model.mediaSourceLabel(mprisPlayer({ trackTitle: "Blue Train", identity: "Spotify" })), "Blue Train")
+  assert.equal(Model.mediaSourceLabel(mprisPlayer({ trackTitle: "   ", identity: "Spotify" })), "Spotify")
+  assert.equal(Model.mediaSourceLabel(mprisPlayer({ desktopEntry: "firefox.desktop" })), "firefox")
+  assert.equal(Model.mediaSourceLabel(mprisPlayer({ dbusName: "org.mpris.MediaPlayer2.vlc.instance42" })), "vlc")
+  assert.equal(Model.mediaSourceLabel(null), "")
+})
+
+test("media source order ignores playback state and skips holes", () => {
+  const brave = mprisPlayer({ dbusName: "org.mpris.MediaPlayer2.brave", trackTitle: "Mix" })
+  const cliamp = mprisPlayer({ dbusName: "org.mpris.MediaPlayer2.cliamp", trackTitle: "Album" })
+  const keyOf = (player) => player.dbusName
+
+  // The service hands out playing sources first; pausing one would reorder
+  // its list. The carousel order must not move.
+  const playingFirst = Model.orderedMediaSources([cliamp, brave], keyOf)
+  const pausedFirst = Model.orderedMediaSources([brave, cliamp], keyOf)
+
+  assert.deepEqual(playingFirst.map(keyOf), pausedFirst.map(keyOf))
+  assert.deepEqual(playingFirst.map(keyOf), [
+    "org.mpris.MediaPlayer2.brave",
+    "org.mpris.MediaPlayer2.cliamp"
+  ])
+
+  assert.deepEqual(Model.orderedMediaSources([null, brave, undefined], keyOf).map(keyOf), [
+    "org.mpris.MediaPlayer2.brave"
+  ])
+  assert.deepEqual(Model.orderedMediaSources(null, keyOf), [])
+  assert.deepEqual(Model.orderedMediaSources([brave], null), [brave])
+})
+
+test("media source details never repeat the label", () => {
+  assert.equal(Model.mediaSourceDetail(mprisPlayer({ trackTitle: "Blue Train", trackArtist: "John Coltrane" })), "John Coltrane")
+  assert.equal(Model.mediaSourceDetail(mprisPlayer({ trackTitle: "Blue Train", desktopEntry: "spotify.desktop" })), "spotify")
+  assert.equal(Model.mediaSourceDetail(mprisPlayer({ identity: "Firefox", dbusName: "org.mpris.MediaPlayer2.firefox.instance7" })), "")
+  assert.equal(Model.mediaSourceDetail(mprisPlayer({ trackTitle: "Podcast" })), "")
+  assert.equal(Model.mediaSourceDetail(null), "")
+})
+
+test("media time labels pad seconds and clamp junk to zero", () => {
+  assert.equal(Model.mediaTimeLabel(0), "0:00")
+  assert.equal(Model.mediaTimeLabel(9), "0:09")
+  assert.equal(Model.mediaTimeLabel(75.9), "1:15")
+  assert.equal(Model.mediaTimeLabel(3671), "61:11")
+  assert.equal(Model.mediaTimeLabel(-12), "0:00")
+  assert.equal(Model.mediaTimeLabel("abc"), "0:00")
+})
+
+test("cycleIndex wraps in both directions and reports empty lists", () => {
+  assert.equal(Model.cycleIndex(0, 1, 3), 1)
+  assert.equal(Model.cycleIndex(2, 1, 3), 0)
+  assert.equal(Model.cycleIndex(0, -1, 3), 2)
+  assert.equal(Model.cycleIndex(1, 5, 3), 0)
+  assert.equal(Model.cycleIndex(-1, 1, 3), 1)
+  assert.equal(Model.cycleIndex(0, 1, 1), 0)
+  assert.equal(Model.cycleIndex(0, 1, 0), -1)
+})

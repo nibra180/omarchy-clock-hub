@@ -212,6 +212,10 @@ Panel {
       root.bar.shell.updateEntryInline(root.settingsEntryId, entry)
   }
 
+  // Set for the length of one key event so activateRequested can tell an
+  // Enter press from a Space press.
+  property bool activateFromReturn: false
+
   function toggleSection(key, enabled) {
     var values = {}
     values[key] = !enabled
@@ -364,9 +368,25 @@ Panel {
         if (dx !== 0) root.moveDay(dx)
         if (dy !== 0) root.moveDay(dy * 7)
       }
+      // Enter and Space both arrive as activateRequested; only Enter also
+      // emits returnRequested first, and it does so in the same key event.
+      // That order is what separates the two here: Enter jumps to today,
+      // Space toggles the focused media card.
+      onReturnRequested: root.activateFromReturn = true
       onActivateRequested: {
-        if (root.quickSettingsOpen) quickSettingsMenu.activateCursor()
-        else root.goToToday()
+        var fromReturn = root.activateFromReturn
+        root.activateFromReturn = false
+
+        if (root.quickSettingsOpen) {
+          quickSettingsMenu.activateCursor()
+          return
+        }
+        if (fromReturn) {
+          root.goToToday()
+          return
+        }
+        // Space keeps jumping to today while the hub has no source to toggle.
+        if (!root.showMedia || !mediaHub.togglePlayPause()) root.goToToday()
       }
       onCloseRequested: {
         if (root.quickSettingsOpen) root.closeQuickSettings()
@@ -388,6 +408,10 @@ Panel {
         else if (t === "t" || t === "T") root.goToToday()
         else if (t === "w" || t === "W") root.toggleWeekStart()
         else if (t === "s" || t === "S") root.openQuickSettings()
+        else if ((t === "1" || t === "2") && root.showAgents)
+          agentsHub.selectProviderAt(Number(t) - 1)
+        else if ((t === "n" || t === "N") && root.showMedia) mediaHub.stepSource(1)
+        else if ((t === "p" || t === "P") && root.showMedia) mediaHub.stepSource(-1)
       }
 
       Column {

@@ -11,7 +11,7 @@ a compact desktop hub.
 - Animated, theme-aware now-playing indicator with Vinyl, Equalizer, and Pulse styles
 - Full Omarchy calendar with week numbers, month navigation, and optional read-only Google Calendar events
 - Year progress above the calendar, with an optional life-progress bar
-- MPRIS media card with clickable artwork, progress, and playback controls
+- MPRIS media carousel: one card per running source, each with its own artwork, progress, and playback controls
 - Omarchy Agents dashboard with provider limits, reset countdowns, daily usage, and model totals
 - Live CPU, memory, and root-disk status with a btop shortcut
 - Theme-aware progress fills, with stock Omarchy styling for readable model rows
@@ -75,6 +75,24 @@ The now-playing indicator defaults to Equalizer and only appears on a
 horizontal bar while audio is playing. Choose Vinyl, Equalizer, or Pulse from
 the same hub settings menu. You can also script settings with `omarchy bar set`.
 
+## Media
+
+The media card shows one source at a time. When a second app registers with
+MPRIS, arrows appear next to `NOW PLAYING` and a dot per source below the card.
+Move between sources with the arrows, by clicking a dot, by swiping the card
+sideways, or with `n` and `p` while the hub is focused.
+
+Every card carries its own transport buttons, and `Space` toggles the card in
+view. So you can pause a browser tab without leaving the card of the music
+player. Omarchy's own `XF86AudioPlay` bind is not the same thing. It goes to the
+longest-running source, whichever card you are looking at.
+
+Bringing a card into view changes only what the hub shows. It never starts or
+stops playback. Pausing a card leaves it in view, and the cards keep their order
+for as long as their sources exist. Clicking the artwork raises that source's
+window. Closing the hub drops the choice, so the next time it opens it shows
+whatever is playing.
+
 ## Calendar
 
 The year bar is always shown. Double-click it, enter a birth year and a life
@@ -94,6 +112,7 @@ With the hub focused:
 - `t` or Enter: jump to today
 - `w`: toggle week start
 - `s`: open hub settings
+- `1` / `2`: select the first or second agent provider
 
 Day selection follows the date across month and year boundaries. Mouse wheel
 over the grid steps by month.
@@ -152,7 +171,7 @@ It only reports upstream changes. It never overwrites local QML. See
 node --test test/*.test.js
 python3 -m unittest discover -s test -p 'test_google_calendar_helper.py'
 python3 -m py_compile tools/google-calendar-helper
-qmllint -I /usr/share/omarchy/shell AgentsHub.qml CalendarEventsBar.qml GoogleCalendarProvider.qml HubSettingsMenu.qml MediaHub.qml Panel.qml SystemStatus.qml ThemeProgressBar.qml VinylIndicator.qml
+qmllint -I /usr/share/omarchy/shell AgentsHub.qml CalendarEventsBar.qml GoogleCalendarProvider.qml HubSettingsMenu.qml MediaHub.qml MediaSourceCard.qml Panel.qml SystemStatus.qml ThemeProgressBar.qml VinylIndicator.qml
 omarchy plugin validate ~/.config/omarchy/plugins/io.github.nibra180.clock-hub
 omarchy restart shell
 ```

@@ -483,6 +483,89 @@ function stepDay(year, month, day, delta) {
   }
 }
 
+// ---- Media sources -----------------------------------------------------
+// The MPRIS service hands out a list of players; the hub has to label each
+// one and step through them. Both are plain string and index work, so they
+// live here instead of in the QML.
+
+// Stable carousel order. The service sorts playing sources to the front, so
+// pausing one moves it and shifts every index behind it. Ordering by player
+// key instead keeps each source in the slot it had, for as long as it exists.
+function orderedMediaSources(players, keyOf) {
+  var list = []
+  if (!players) return list
+
+  for (var i = 0; i < players.length; i++) {
+    if (players[i]) list.push(players[i])
+  }
+
+  if (typeof keyOf !== "function") return list
+
+  return list.sort(function(a, b) {
+    var left = String(keyOf(a) || "")
+    var right = String(keyOf(b) || "")
+    return left < right ? -1 : (left > right ? 1 : 0)
+  })
+}
+
+function mediaSourceApp(player) {
+  if (!player) return ""
+
+  var entry = String(player.desktopEntry || "").replace(/\.desktop$/, "").trim()
+  if (entry !== "") return entry
+
+  return String(player.dbusName || "")
+    .replace(/^org\.mpris\.MediaPlayer2\./, "")
+    .replace(/\.instance[0-9]+$/, "")
+    .trim()
+}
+
+function mediaSourceLabel(player) {
+  if (!player) return ""
+
+  var title = String(player.trackTitle || "").trim()
+  if (title !== "") return title
+
+  var identity = String(player.identity || "").trim()
+  if (identity !== "") return identity
+
+  return mediaSourceApp(player)
+}
+
+// Second line of a source card. Never repeats the label, so a player that is
+// only known by its app name gets no detail at all.
+function mediaSourceDetail(player) {
+  if (!player) return ""
+
+  var artist = String(player.trackArtist || "").trim()
+  if (artist !== "") return artist
+
+  var app = mediaSourceApp(player)
+  if (app === "") return ""
+
+  return app.toLowerCase() === mediaSourceLabel(player).toLowerCase() ? "" : app
+}
+
+function mediaTimeLabel(seconds) {
+  var value = Math.max(0, Math.floor(Number(seconds) || 0))
+  var minutes = Math.floor(value / 60)
+  var rest = value % 60
+  return minutes + ":" + (rest < 10 ? "0" : "") + rest
+}
+
+// Wrapping step through a list. Returns -1 for an empty list so callers can
+// tell "nothing to focus" from "focus the first entry".
+function cycleIndex(index, delta, length) {
+  var total = Math.max(0, Math.floor(Number(length) || 0))
+  if (total === 0) return -1
+
+  var start = Math.floor(Number(index) || 0)
+  if (!isFinite(start) || start < 0) start = 0
+
+  var step = Math.floor(Number(delta) || 0)
+  return (((start + step) % total) + total) % total
+}
+
 function stepMonth(year, month, delta) {
   var target = new Date(year, Number(month) + Number(delta), 1)
   return { year: target.getFullYear(), month: target.getMonth() }
@@ -520,6 +603,12 @@ if (typeof module !== "undefined") {
     clockFormats: clockFormats,
     clockFormatRing: clockFormatRing,
     nextClockFormat: nextClockFormat,
-    isoWeekLiteral: isoWeekLiteral
+    isoWeekLiteral: isoWeekLiteral,
+    orderedMediaSources: orderedMediaSources,
+    mediaSourceApp: mediaSourceApp,
+    mediaSourceLabel: mediaSourceLabel,
+    mediaSourceDetail: mediaSourceDetail,
+    mediaTimeLabel: mediaTimeLabel,
+    cycleIndex: cycleIndex
   }
 }

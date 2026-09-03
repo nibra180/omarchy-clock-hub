@@ -2,9 +2,15 @@ import QtQuick
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
+import "Model.js" as Model
 
-// Compact now-playing card for the clock hub. Playback is provided by
-// Omarchy's existing MPRIS service, so this component only owns presentation.
+// Now-playing section of the clock hub. Playback comes from Omarchy's MPRIS
+// service, so this component only owns presentation and which source is in
+// view.
+//
+// With more than one source the card becomes a carousel: one card per player,
+// arrows and dots to move between them, and transport buttons that address
+// the card's own player instead of whatever the service calls active.
 Item {
   id: root
 
@@ -17,33 +23,99 @@ Item {
   signal closeRequested()
 
   readonly property var activePlayer: mediaService ? mediaService.activePlayer : null
-  readonly property bool hasMedia: activePlayer !== null && (activePlayer.trackTitle || activePlayer.trackArtist)
-  readonly property string title: hasMedia ? (activePlayer.trackTitle || "Unknown title") : "Nothing playing"
-  readonly property string artist: hasMedia ? (activePlayer.trackArtist || "Unknown artist") : "Start playback in a media app"
-  readonly property string album: hasMedia && activePlayer.trackAlbum ? activePlayer.trackAlbum : ""
-  readonly property string artUrl: hasMedia && activePlayer.trackArtUrl ? activePlayer.trackArtUrl : ""
-  readonly property string sourceName: activePlayer ? (activePlayer.identity || activePlayer.desktopEntry || "Media") : "Media"
-  readonly property real trackLength: activePlayer ? Math.max(0, Number(activePlayer.length || 0)) : 0
+  // Ordered by player key, not by the service's playing-first order: pausing
+  // a source must not move its card or shift the dots.
+  readonly property var sources: mediaService
+    ? Model.orderedMediaSources(mediaService.sourcePlayers, function(player) { return mediaService.playerKey(player) })
+    : []
+  readonly property bool hasMultipleSources: sources.length > 1
+
+  // The service honors its own preferredPlayerKey only while that player is
+  // playing, so a paused source picked here would snap back as soon as
+  // anything else plays. The hub keeps the focused source itself; an empty
+  // key means "follow whatever is active".
+  property string focusedKey: ""
+
+  readonly property int activeIndex: activePlayer ? indexOfPlayer(activePlayer) : -1
+  readonly property int focusedIndex: {
+    var chosen = indexOfKey(focusedKey)
+    if (chosen >= 0) return chosen
+    if (activeIndex >= 0) return activeIndex
+    return sources.length > 0 ? 0 : -1
+  }
+  readonly property var focusedPlayer: focusedIndex >= 0 ? sources[focusedIndex] : activePlayer
 
   property real trackPosition: 0
+  property bool userMovingCarousel: false
 
   implicitWidth: Style.space(270)
   implicitHeight: mediaColumn.implicitHeight
 
+  function indexOfKey(key) {
+    if (!mediaService || !key) return -1
+    for (var i = 0; i < sources.length; i++) {
+      if (mediaService.playerKey(sources[i]) === key) return i
+    }
+    return -1
+  }
+
+  function indexOfPlayer(player) {
+    return mediaService && player ? indexOfKey(mediaService.playerKey(player)) : -1
+  }
+
+  function focusSource(index) {
+    if (!mediaService || index < 0 || index >= sources.length) return
+
+    var player = sources[index]
+    if (!player) return
+
+    focusedKey = mediaService.playerKey(player)
+    syncPosition()
+  }
+
+  // Every transport action goes through here, from the card buttons and from
+  // the keyboard. Pinning first matters: pausing a source costs it the
+  // service's active-player role, and an unpinned hub would follow that to
+  // another card.
+  function runActionOn(index, action) {
+    if (!mediaService || index < 0 || index >= sources.length) return false
+
+    var player = sources[index]
+    if (!player) return false
+
+    focusedKey = mediaService.playerKey(player)
+    var handled = mediaService.runAction(action, false, focusedKey)
+    if (handled && (action === "next" || action === "previous")) trackPosition = 0
+    return handled
+  }
+
+  // Toggles the card in view, not whatever the service considers active.
+  // Reports back whether it had anything to toggle so the panel can keep the
+  // key useful when the hub shows no source at all.
+  function togglePlayPause() {
+    return runActionOn(focusedIndex, "playPause")
+  }
+
+  function stepSource(delta) {
+    if (sources.length < 2) return
+    focusSource(Model.cycleIndex(Math.max(0, focusedIndex), delta, sources.length))
+  }
+
+  function syncCarousel() {
+    if (focusedIndex >= 0 && carousel.currentIndex !== focusedIndex) carousel.currentIndex = focusedIndex
+  }
+
+  // The service rebuilds its list on every playback change, which resets the
+  // view. Restoring the focused card has to be silent, or a pause would look
+  // like the carousel turning.
+  function restoreCarousel() {
+    if (focusedIndex < 0) return
+    carousel.currentIndex = focusedIndex
+    carousel.positionViewAtIndex(focusedIndex, ListView.SnapPosition)
+  }
+
   function syncPosition() {
-    trackPosition = activePlayer ? Math.max(0, Number(activePlayer.position || 0)) : 0
-  }
-
-  function formatTime(seconds) {
-    var value = Math.max(0, Math.floor(Number(seconds) || 0))
-    var minutes = Math.floor(value / 60)
-    var rest = value % 60
-    return minutes + ":" + (rest < 10 ? "0" : "") + rest
-  }
-
-  function runAction(action) {
-    if (!mediaService || !activePlayer) return
-    mediaService.runAction(action, false, mediaService.playerKey(activePlayer))
+    trackPosition = focusedPlayer ? Math.max(0, Number(focusedPlayer.position || 0)) : 0
   }
 
   function regexEscape(value) {
@@ -54,14 +126,14 @@ Item {
     return "\"" + String(value || "").replace(/\\/g, "\\\\").replace(/\"/g, "\\\"") + "\""
   }
 
-  function openMediaSource() {
-    if (!activePlayer) return
+  function openMediaSource(player) {
+    if (!player) return
 
-    if (activePlayer.canRaise) {
-      activePlayer.raise()
+    if (player.canRaise) {
+      player.raise()
     } else {
-      var title = String(activePlayer.trackTitle || "").replace(/[\r\n]+/g, " ").trim()
-      var desktopEntry = String(activePlayer.desktopEntry || "").replace(/\.desktop$/, "")
+      var title = String(player.trackTitle || "").replace(/[\r\n]+/g, " ").trim()
+      var desktopEntry = Model.mediaSourceApp(player)
       if (title !== "") {
         var selector = "title:.*" + regexEscape(title) + ".*"
         sourceProcess.command = ["hyprctl", "dispatch", "hl.dsp.focus({ window = " + luaQuote(selector) + " })"]
@@ -77,13 +149,23 @@ Item {
     root.closeRequested()
   }
 
-  onActivePlayerChanged: syncPosition()
-  onPanelOpenChanged: if (panelOpen) syncPosition()
+  onFocusedPlayerChanged: syncPosition()
+  onFocusedIndexChanged: syncCarousel()
+  // A player appearing or disappearing reorders the list, which can move the
+  // focused card without changing its key.
+  onSourcesChanged: Qt.callLater(restoreCarousel)
+  // Reopening the hub should show what is playing, not last session's pick.
+  onPanelOpenChanged: {
+    if (panelOpen) syncPosition()
+    else focusedKey = ""
+  }
+
+  Component.onCompleted: syncCarousel()
 
   Timer {
     interval: 500
     repeat: true
-    running: root.panelOpen && root.activePlayer !== null && root.activePlayer.isPlaying
+    running: root.panelOpen && root.focusedPlayer !== null && root.focusedPlayer.isPlaying
     triggeredOnStart: true
     onTriggered: root.syncPosition()
   }
@@ -98,183 +180,154 @@ Item {
     width: parent.width
     spacing: Style.space(10)
 
-    Text {
-      width: parent.width
-      text: "NOW PLAYING"
-      color: Qt.darker(root.foreground, 1.5)
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.caption
-      font.letterSpacing: 1
-      font.bold: true
-      horizontalAlignment: Text.AlignHCenter
-    }
-
     Item {
       width: parent.width
-      height: Style.space(210)
+      height: Math.max(sectionLabel.implicitHeight, navRow.implicitHeight)
 
-      BorderSurface {
-        id: cover
+      Text {
+        id: sectionLabel
         anchors.centerIn: parent
-        width: Style.space(200)
-        height: width
-        radius: Style.cornerRadius
-        clip: true
-        color: Style.normalFillFor(root.foreground, Color.accent)
-        borderSpec: Border.controlSpec("normal", root.foreground, Color.accent)
-
-        Image {
-          anchors.fill: parent
-          anchors.margins: cover.borderLeft + Style.space(2)
-          source: root.artUrl
-          fillMode: Image.PreserveAspectCrop
-          asynchronous: true
-          cache: true
-          visible: source !== ""
-        }
-
-        Text {
-          anchors.centerIn: parent
-          visible: root.artUrl === ""
-          text: "󰝚"
-          color: Qt.darker(root.foreground, 1.35)
-          font.family: root.fontFamily
-          font.pixelSize: Style.space(72)
-        }
-
-        MouseArea {
-          anchors.fill: parent
-          enabled: root.activePlayer !== null
-          cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-          onClicked: root.openMediaSource()
-        }
-      }
-    }
-
-    Column {
-      width: parent.width
-      spacing: Style.space(3)
-
-      Text {
-        width: parent.width
-        text: root.title
-        color: root.foreground
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.subtitle
-        font.bold: true
-        horizontalAlignment: Text.AlignHCenter
-        elide: Text.ElideRight
-      }
-
-      Text {
-        width: parent.width
-        text: root.artist
-        color: Qt.darker(root.foreground, 1.35)
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.bodySmall
-        horizontalAlignment: Text.AlignHCenter
-        elide: Text.ElideRight
-      }
-
-      Text {
-        visible: root.album !== ""
-        width: parent.width
-        text: root.album
-        color: Qt.darker(root.foreground, 1.65)
+        text: "NOW PLAYING"
+        color: Qt.darker(root.foreground, 1.5)
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
-        horizontalAlignment: Text.AlignHCenter
-        elide: Text.ElideRight
+        font.letterSpacing: 1
+        font.bold: true
+      }
+
+      Row {
+        id: navRow
+        visible: root.hasMultipleSources
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Style.space(2)
+
+        PanelActionButton {
+          iconText: "󰅁"
+          tooltipText: "Previous source"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+          fontSize: Style.font.body
+          onClicked: root.stepSource(-1)
+        }
+
+        PanelActionButton {
+          iconText: "󰅂"
+          tooltipText: "Next source"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+          fontSize: Style.font.body
+          onClicked: root.stepSource(1)
+        }
       }
     }
 
     Item {
-      visible: root.trackLength > 0
       width: parent.width
-      height: visible ? Style.space(24) : 0
+      // Cards are structurally identical, so the placeholder below is also
+      // the height reference for every card in the carousel.
+      height: placeholderCard.implicitHeight
 
-      ThemeProgressBar {
-        id: progressTrack
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: Style.space(4)
-        value: Math.min(1, root.trackPosition / Math.max(1, root.trackLength))
+      MediaSourceCard {
+        id: placeholderCard
+        visible: root.sources.length === 0
+        width: parent.width
+        height: parent.height
+        player: null
         foreground: root.foreground
-        trackColor: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
-        animationDuration: 450
+        fontFamily: root.fontFamily
       }
 
-      Text {
-        anchors.left: parent.left
-        anchors.top: progressTrack.bottom
-        anchors.topMargin: Style.space(2)
-        text: root.formatTime(root.trackPosition)
-        color: Qt.darker(root.foreground, 1.6)
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.caption
-      }
+      ListView {
+        id: carousel
+        visible: root.sources.length > 0
+        anchors.fill: parent
+        clip: true
+        orientation: ListView.Horizontal
+        model: root.sources
+        interactive: root.hasMultipleSources
+        snapMode: ListView.SnapOneItem
+        highlightRangeMode: ListView.StrictlyEnforceRange
+        preferredHighlightBegin: 0
+        preferredHighlightEnd: width
+        highlightMoveDuration: 220
+        highlightMoveVelocity: -1
+        boundsBehavior: Flickable.StopAtBounds
+        // Keep every card alive so swiping never lands on an empty frame.
+        cacheBuffer: Math.max(0, width * 4)
+        // Only a finished drag or flick changes the focus. currentIndex also
+        // moves while dragging and on model resets, which must not count as
+        // the user picking a source, so the move has to start at the pointer.
+        onDragStarted: root.userMovingCarousel = true
+        onFlickStarted: root.userMovingCarousel = true
+        onMovementEnded: {
+          if (!root.userMovingCarousel) return
+          root.userMovingCarousel = false
+          root.focusSource(carousel.currentIndex)
+        }
 
-      Text {
-        anchors.right: parent.right
-        anchors.top: progressTrack.bottom
-        anchors.topMargin: Style.space(2)
-        text: root.formatTime(root.trackLength)
-        color: Qt.darker(root.foreground, 1.6)
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.caption
+        delegate: MediaSourceCard {
+          required property var modelData
+          required property int index
+
+          width: carousel.width
+          height: carousel.height
+          player: modelData
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+          // Only the focused card is on screen, so only it gets the polled
+          // position. The rest read whatever the player last reported.
+          positionSeconds: index === root.focusedIndex
+            ? root.trackPosition
+            : (modelData ? Math.max(0, Number(modelData.position || 0)) : 0)
+          onOpenRequested: root.openMediaSource(modelData)
+          onActionRequested: function(action) { root.runActionOn(index, action) }
+        }
       }
     }
 
     Row {
+      id: dotsRow
+      visible: root.hasMultipleSources
       anchors.horizontalCenter: parent.horizontalCenter
-      spacing: Style.space(10)
+      spacing: Style.space(6)
 
-      Button {
-        iconText: "󰒮"
-        tooltipText: "Previous"
-        foreground: root.foreground
-        fontFamily: root.fontFamily
-        iconSize: Style.font.iconLarge
-        enabled: root.activePlayer && root.activePlayer.canGoPrevious
-        opacity: enabled ? 1 : 0.35
-        onClicked: root.runAction("previous")
+      Repeater {
+        model: root.sources
+
+        Item {
+          id: dot
+          required property var modelData
+          required property int index
+
+          readonly property bool current: index === root.focusedIndex
+
+          width: Style.space(16)
+          height: Style.space(16)
+
+          Rectangle {
+            anchors.centerIn: parent
+            width: Style.space(7)
+            height: width
+            radius: width / 2
+            color: dot.current || dotMouse.containsMouse
+              ? root.foreground
+              : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.28)
+
+            Behavior on color {
+              ColorAnimation { duration: 120 }
+            }
+          }
+
+          MouseArea {
+            id: dotMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.focusSource(dot.index)
+          }
+        }
       }
-
-      Button {
-        iconText: root.activePlayer && root.activePlayer.isPlaying ? "󰏤" : "󰐊"
-        tooltipText: root.activePlayer && root.activePlayer.isPlaying ? "Pause" : "Play"
-        foreground: root.foreground
-        fontFamily: root.fontFamily
-        iconSize: Style.font.iconLarge
-        horizontalPadding: Style.spacing.panelGap
-        enabled: root.activePlayer && (root.activePlayer.canTogglePlaying || root.activePlayer.canPlay || root.activePlayer.canPause)
-        opacity: enabled ? 1 : 0.35
-        onClicked: root.runAction("playPause")
-      }
-
-      Button {
-        iconText: "󰒭"
-        tooltipText: "Next"
-        foreground: root.foreground
-        fontFamily: root.fontFamily
-        iconSize: Style.font.iconLarge
-        enabled: root.activePlayer && root.activePlayer.canGoNext
-        opacity: enabled ? 1 : 0.35
-        onClicked: root.runAction("next")
-      }
-    }
-
-    Text {
-      visible: root.activePlayer !== null
-      width: parent.width
-      text: root.sourceName.toUpperCase()
-      color: Qt.darker(root.foreground, 1.8)
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.caption
-      font.letterSpacing: 1
-      horizontalAlignment: Text.AlignHCenter
-      elide: Text.ElideRight
     }
   }
 }

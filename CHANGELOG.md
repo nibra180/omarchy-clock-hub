@@ -4,6 +4,14 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-03
+
+### Added
+
+- Media carousel for multiple MPRIS sources: one card per source with its own transport buttons, header arrows, dots, swiping, and the `n` and `p` shortcuts. Focusing a source never moves playback, and pausing a card leaves it in view.
+- `Space` toggles playback on the media card in view. `Enter` still jumps to today.
+- `1` and `2` switch to the first and second agent providers while the hub is open.
+
 ### Changed
 
 - Restored the stock Omarchy Agents fill for token-by-model rows to keep their labels readable.
@@ -40,6 +48,7 @@ All notable changes to Omarchy Clock Hub are documented here.
 - Hyprland-derived corner rounding for the hub and album artwork.
 - Automatic upstream change detection and third-party attribution.
 
-[Unreleased]: https://github.com/nibra180/omarchy-clock-hub/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/nibra180/omarchy-clock-hub/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/nibra180/omarchy-clock-hub/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/nibra180/omarchy-clock-hub/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/nibra180/omarchy-clock-hub/releases/tag/v1.0.0

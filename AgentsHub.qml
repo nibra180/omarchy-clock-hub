@@ -232,6 +232,11 @@ Item {
     }
   }
 
+  function selectProviderAt(index) {
+    if (index < 0 || index >= orderedProviders.length) return
+    selectProvider(orderedProviders[index])
+  }
+
   function selectMainProvider() {
     if (!agentsWidget || providers.length === 0) return
     if (String(agentsWidget.selectedProviderId || "") !== "") return

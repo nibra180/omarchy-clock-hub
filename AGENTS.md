@@ -10,8 +10,8 @@ system status. The repository has no package manager or build step.
 
 - `BarWidget.qml` is the plugin entry point and owns the clock label.
 - `Panel.qml` coordinates the popup and persists widget settings.
-- `AgentsHub.qml`, `MediaHub.qml`, `SystemStatus.qml`, and
-  `VinylIndicator.qml` implement focused UI sections.
+- `AgentsHub.qml`, `MediaHub.qml`, `MediaSourceCard.qml`, `SystemStatus.qml`,
+  and `VinylIndicator.qml` implement focused UI sections.
 - `Model.js` contains Qt-independent date, calendar, and format logic.
 - `manifest.json` defines the public plugin identity and entry point.
 - `tools/check-upstreams` and `tools/post-update-check` track changes in the
@@ -56,7 +56,7 @@ Run the relevant checks before reporting completion:
 
 ```bash
 node --test test/*.test.js
-qmllint -I /usr/share/omarchy/shell AgentsHub.qml HubSettingsMenu.qml MediaHub.qml Panel.qml SystemStatus.qml VinylIndicator.qml
+qmllint -I /usr/share/omarchy/shell AgentsHub.qml HubSettingsMenu.qml MediaHub.qml MediaSourceCard.qml Panel.qml SystemStatus.qml VinylIndicator.qml
 omarchy plugin validate ~/.config/omarchy/plugins/io.github.nibra180.clock-hub
 ```
 
