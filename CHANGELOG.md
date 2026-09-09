@@ -7,6 +7,7 @@ All notable changes to Omarchy Clock Hub are documented here.
 ### Changed
 
 - Agent provider buttons and the media carousel now show their keyboard shortcuts, with extra space below the media controls.
+- Close now uses the bar's hover-reveal setter instead of writing the readonly flag, so the hub can dismiss again.
 
 ## [1.1.0] - 2026-09-03
 

@@ -38,6 +38,8 @@ test("nested panel delegates IPC ownership to the bar widget", () => {
   assert.match(source, /ipcTarget:\s*"omarchy\.clock"/)
   assert.match(source, /manageIpc:\s*false/)
   assert.match(source, /readonly property var barIdentity:\s*hostWidget \|\| root/)
+  assert.match(source, /typeof root\.bar\.setCenterHoverRevealSuppressed === "function"/)
+  assert.match(source, /root\.bar\.setCenterHoverRevealSuppressed\(value\)/)
 })
 
 test("hub reuses mounted media and agents providers", () => {
