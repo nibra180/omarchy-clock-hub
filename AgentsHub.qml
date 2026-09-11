@@ -2,9 +2,10 @@ import QtQuick
 import QtQuick.Controls
 import qs.Commons
 import qs.Ui
+import "Model.js" as Model
 
-// Dashboard view over the already-running omarchy.agents bar widget. Sharing
-// that instance avoids a second usage scan and keeps both views in sync.
+// Agent usage in the hub. Prefer the live omarchy.agents widget when the bar
+// still hands it over; otherwise read the same JSON files the collector writes.
 Item {
   id: root
 
@@ -17,17 +18,19 @@ Item {
 
   signal closeRequested()
 
-  readonly property var providers: agentsWidget ? agentsWidget.providers : []
+  readonly property var widgetProviders: agentsWidget ? (agentsWidget.providers || []) : []
+  readonly property bool usingLiveWidget: widgetProviders.length > 0
+  readonly property var providers: usingLiveWidget ? widgetProviders : usageFiles.providers
   readonly property var orderedProviders: orderedProviderList(providers)
-  readonly property var provider: agentsWidget ? agentsWidget.provider : null
-  readonly property var limits: agentsWidget ? agentsWidget.limits : []
-  readonly property var models: agentsWidget && "models" in agentsWidget
+  readonly property var provider: usingLiveWidget ? agentsWidget.provider : usageFiles.provider
+  readonly property var limits: Model.agentLimitWindows(provider)
+  readonly property var models: usingLiveWidget && agentsWidget.models
     ? agentsWidget.models
     : modelRows()
   readonly property var balance: provider ? (provider.balance || null) : null
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property color urgent: bar ? bar.urgent : Color.urgent
-  readonly property bool alarming: agentsWidget ? agentsWidget.alarming : false
+  readonly property bool alarming: usingLiveWidget ? agentsWidget.alarming : usageFiles.alarming
 
   implicitWidth: Style.space(380)
   implicitHeight: Style.space(560)
@@ -71,11 +74,7 @@ Item {
   function limitTitle(limit) {
     if (!limit) return "Limit"
     if (limit.title) return String(limit.title)
-    var label = String(limit.label || "Limit")
-    var lower = label.toLowerCase()
-    if (lower.indexOf("week") >= 0 || lower.indexOf("7-day") >= 0) return "Weekly"
-    if (lower.indexOf("session") >= 0 || lower.match(/\d+\s*-?\s*h/)) return "Session"
-    return label.replace(/\s*\(.*\)\s*/, "")
+    return Model.agentWindowTitle(limit.label)
   }
 
   function currency(value, code) {
@@ -222,11 +221,12 @@ Item {
   }
 
   function selectProvider(item) {
-    if (!agentsWidget || !item) return
+    if (!item) return
     var targetId = String(item.providerId || "")
     for (var i = 0; i < providers.length; i++) {
       if (String(providers[i].providerId || "") === targetId) {
-        agentsWidget.selectProvider(i)
+        if (usingLiveWidget) agentsWidget.selectProvider(i)
+        else usageFiles.selectProvider(i)
         return
       }
     }
@@ -238,19 +238,26 @@ Item {
   }
 
   function selectMainProvider() {
-    if (!agentsWidget || providers.length === 0) return
-    if (String(agentsWidget.selectedProviderId || "") !== "") return
+    if (providers.length === 0) return
+    var currentId = usingLiveWidget
+      ? String(agentsWidget.selectedProviderId || "")
+      : String(usageFiles.selectedProviderId || "")
+    if (currentId !== "") return
 
     for (var i = 0; i < providers.length; i++) {
       if (String(providers[i].providerId || "").toLowerCase() === "codex") {
-        agentsWidget.selectProvider(i)
+        if (usingLiveWidget) agentsWidget.selectProvider(i)
+        else usageFiles.selectProvider(i)
         return
       }
     }
   }
 
   function refresh() {
-    if (agentsWidget) agentsWidget.refreshNow()
+    if (usingLiveWidget && typeof agentsWidget.refreshNow === "function")
+      agentsWidget.refreshNow()
+    else
+      usageFiles.refreshNow()
   }
 
   function launchAgent() {
@@ -262,9 +269,17 @@ Item {
   onProvidersChanged: selectMainProvider()
   onPanelOpenChanged: if (panelOpen) {
     root.nowMs = Date.now()
+    if (usingLiveWidget && typeof agentsWidget.refreshLimits === "function")
+      agentsWidget.refreshLimits()
     Qt.callLater(function() {
       agentScroll.contentY = agentScroll.originY
     })
+  }
+
+  AgentsUsage {
+    id: usageFiles
+    panelOpen: root.panelOpen
+    watchFiles: !root.usingLiveWidget
   }
 
   Timer {

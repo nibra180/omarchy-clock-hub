@@ -18,14 +18,17 @@ a compact desktop hub.
 - Manifest-backed toggles for Media, Agents, System Status, and Google Calendar
 - Automatic upstream change detection after `omarchy update`
 
-The hub reuses Omarchy's running `omarchy.media` service and the live
-`omarchy.agents` widget. It does not start duplicate media or usage collectors.
+The hub reuses Omarchy's running `omarchy.media` service. Agent numbers come
+from the live `omarchy.agents` widget when the bar exposes it, otherwise from
+the same usage JSON files that widget already writes. Opening the hub asks
+`omarchy-agent-usage-update --limits-only` for a fresh session window. It does
+not scan transcripts itself.
 
 ## Requirements
 
 - Omarchy 4.0 or newer
 - The stock `omarchy.media` service when the Media section is enabled
-- `omarchy.agents` in the bar when the Agents section is enabled
+- Agent usage JSON under `~/.local/state/omarchy/agents/usage` (written by `omarchy-agent-usage-update`)
 - `bash`, `awk`, `df`, and the Linux `/proc` filesystem when System Status is enabled
 - `python3` and `secret-tool` when Google Calendar is enabled
 
@@ -77,8 +80,11 @@ the same hub settings menu. You can also script settings with `omarchy bar set`.
 
 ## Media
 
-The media card shows one source at a time. When a second app registers with
-MPRIS, arrows appear next to `NOW PLAYING` and a dot per source below the card.
+The media card shows one source at a time. Browser PWAs such as YouTube Music
+register as Chromium on MPRIS; if the host withholds the source list, the hub
+still shows whatever Omarchy currently treats as the active player.
+When a second app registers with MPRIS, arrows appear next to `NOW PLAYING`
+and a dot per source below the card.
 Move between sources with the arrows, by clicking a dot, by swiping the card
 sideways, or with `n` and `p` while the hub is focused.
 

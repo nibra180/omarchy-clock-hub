@@ -10,8 +10,8 @@ system status. The repository has no package manager or build step.
 
 - `BarWidget.qml` is the plugin entry point and owns the clock label.
 - `Panel.qml` coordinates the popup and persists widget settings.
-- `AgentsHub.qml`, `MediaHub.qml`, `MediaSourceCard.qml`, `SystemStatus.qml`,
-  and `VinylIndicator.qml` implement focused UI sections.
+- `AgentsHub.qml`, `AgentsUsage.qml`, `MediaHub.qml`, `MediaSourceCard.qml`,
+  `SystemStatus.qml`, and `VinylIndicator.qml` implement focused UI sections.
 - `Model.js` contains Qt-independent date, calendar, and format logic.
 - `manifest.json` defines the public plugin identity and entry point.
 - `tools/check-upstreams` and `tools/post-update-check` track changes in the
@@ -23,8 +23,9 @@ system status. The repository has no package manager or build step.
   and IPC target `omarchy.clock` unless a migration is part of the task.
 - Preserve `open()`, `close()`, `opened`, and popout handoff behavior on the bar
   widget. Omarchy uses that shape to route panel and IPC actions.
-- Reuse the running `omarchy.media` service and mounted `omarchy.agents` widget.
-  Do not add duplicate collectors or background polling.
+- Reuse the running `omarchy.media` service. Prefer the mounted `omarchy.agents`
+  widget for usage, and read its usage JSON files when that widget is not
+  exposed. Do not add a second transcript scanner or background poller.
 - Treat injected `bar`, service, player, and agents objects as optional. The UI
   must still instantiate when one is unavailable.
 - Keep reusable date and format calculations in `Model.js`. It must remain free
@@ -56,7 +57,7 @@ Run the relevant checks before reporting completion:
 
 ```bash
 node --test test/*.test.js
-qmllint -I /usr/share/omarchy/shell AgentsHub.qml HubSettingsMenu.qml MediaHub.qml MediaSourceCard.qml Panel.qml SystemStatus.qml VinylIndicator.qml
+qmllint -I /usr/share/omarchy/shell AgentsHub.qml AgentsUsage.qml HubSettingsMenu.qml MediaHub.qml MediaSourceCard.qml Panel.qml SystemStatus.qml VinylIndicator.qml
 omarchy plugin validate ~/.config/omarchy/plugins/io.github.nibra180.clock-hub
 ```
 

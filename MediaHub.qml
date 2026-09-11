@@ -25,8 +25,15 @@ Item {
   readonly property var activePlayer: mediaService ? mediaService.activePlayer : null
   // Ordered by player key, not by the service's playing-first order: pausing
   // a source must not move its card or shift the dots.
+  // sourcePlayers comes through Omarchy's plugin proxy, which only forwards
+  // the list when Array.isArray succeeds. QML player lists often fail that
+  // check, so a playing Chromium/YouTube Music session would vanish here
+  // while the bar still sees activePlayer.
   readonly property var sources: mediaService
-    ? Model.orderedMediaSources(mediaService.sourcePlayers, function(player) { return mediaService.playerKey(player) })
+    ? Model.orderedMediaSources(
+        mediaService.sourcePlayers,
+        function(player) { return mediaService.playerKey(player) },
+        mediaService.activePlayer)
     : []
   readonly property bool hasMultipleSources: sources.length > 1
 
