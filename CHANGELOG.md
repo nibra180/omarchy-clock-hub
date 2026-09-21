@@ -6,7 +6,7 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 ### Added
 
-- OpenCode Go plan quota in the Agents dashboard, via a bundled collector (`tools/omarchy-agent-usage-opencode-go`) that fills the gap left by Omarchy's own collectors.
+- OpenCode Go plan quota and today's prompts, sessions, and tokens in the Agents dashboard, via a bundled collector (`tools/omarchy-agent-usage-opencode-go`) that fills the gap left by Omarchy's own collectors. Local numbers come from opencode's own session database, filtered to the Go provider, the same way `omarchy-agent-usage-claude` and `omarchy-agent-usage-codex` already read it for their providers.
 - An OpenCode provider mark for the Agents dashboard.
 
 ### Changed

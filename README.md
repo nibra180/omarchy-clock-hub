@@ -31,14 +31,20 @@ Omarchy ships no usage collector for OpenCode Go, so the hub runs its own
 directory the other collectors use. It picks up the API key opencode already
 stores (`opencode auth login -p opencode-go`, or `OPENCODE_API_KEY`) and shows
 the plan's rolling 5-hour, weekly, and monthly quota next to the other
-providers, whether or not `omarchy.agents` is mounted.
+providers, whether or not `omarchy.agents` is mounted. Today's prompts,
+sessions, and token totals come from a read-only scan of opencode's own
+session database, filtered to messages that actually ran on the Go provider,
+the same way `omarchy-agent-usage-claude` and `omarchy-agent-usage-codex`
+already read that database for their own providers. Sessions run through
+OpenCode's free Zen tier or a different provider do not count toward Go's
+numbers.
 
 ## Requirements
 
 - Omarchy 4.0 or newer
 - The stock `omarchy.media` service when the Media section is enabled
 - Agent usage JSON under `~/.local/state/omarchy/agents/usage` (written by `omarchy-agent-usage-update`)
-- `curl` and `jq` for the bundled OpenCode Go usage collector; an OpenCode Go subscription is optional
+- `python3` for the bundled OpenCode Go usage collector; an OpenCode Go subscription is optional
 - `bash`, `awk`, `df`, and the Linux `/proc` filesystem when System Status is enabled
 - `python3` and `secret-tool` when Google Calendar is enabled
 
@@ -184,7 +190,9 @@ It only reports upstream changes. It never overwrites local QML. See
 ```bash
 node --test test/*.test.js
 python3 -m unittest discover -s test -p 'test_google_calendar_helper.py'
+python3 -m unittest discover -s test -p 'test_opencode_go_usage.py'
 python3 -m py_compile tools/google-calendar-helper
+python3 -m py_compile tools/omarchy-agent-usage-opencode-go
 qmllint -I /usr/share/omarchy/shell AgentsHub.qml CalendarEventsBar.qml GoogleCalendarProvider.qml HubSettingsMenu.qml MediaHub.qml MediaSourceCard.qml Panel.qml SystemStatus.qml ThemeProgressBar.qml VinylIndicator.qml
 omarchy plugin validate ~/.config/omarchy/plugins/io.github.nibra180.clock-hub
 omarchy restart shell
