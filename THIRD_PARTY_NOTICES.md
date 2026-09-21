@@ -63,6 +63,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## opencode icon
+
+The OpenCode Go provider mark (`assets/agents/opencode-go.svg`,
+`assets/agents/opencode-go-light.svg`) is the official opencode logo,
+recolored to match this hub's other provider marks.
+
+Source: <https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/opencode/mono.svg> (via <https://thesvg.org/icon/opencode>)
+
+```text
+opencode logo (c) 2026 opencode. Distributed under MIT.
+```
+
 ## Ruixen Shell
 
 The media-hub concept and visual direction were inspired by Ruixen Shell.

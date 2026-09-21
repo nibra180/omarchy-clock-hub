@@ -92,15 +92,20 @@ test("agent model usage mirrors the mounted Agents panel", () => {
   assert.match(modelRow, /root\.alpha\(root\.foreground, 0\.14\)/);
 });
 
-test("number keys select the first two ordered agent providers", () => {
+test("number keys select any ordered agent provider", () => {
   const hub = read("AgentsHub.qml");
   const panel = read("Panel.qml");
 
   assert.match(hub, /function selectProviderAt\(index\)/);
   assert.match(hub, /selectProvider\(orderedProviders\[index\]\)/);
-  assert.match(hub, /iconText: index < 2 \? String\(index \+ 1\) : ""/);
-  assert.match(panel, /\(t === "1" \|\| t === "2"\) && root\.showAgents/);
+  assert.match(hub, /iconText: index < 9 \? String\(index \+ 1\) : ""/);
+  assert.match(panel, /\/\^\[1-9\]\$\/\.test\(t\) && root\.showAgents/);
   assert.match(panel, /agentsHub\.selectProviderAt\(Number\(t\) - 1\)/);
+});
+
+test("Codex, OpenCode Go, and Claude get a fixed hub tab order", () => {
+  const hub = read("AgentsHub.qml");
+  assert.match(hub, /var priorities = \["codex", "opencode-go", "claude"\]/);
 });
 
 test("section settings stay aligned across manifest and panel", () => {

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import Quickshell.Io
 import qs.Commons
 import qs.Ui
 import "Model.js" as Model
@@ -203,7 +204,7 @@ Item {
 
   function orderedProviderList(source) {
     var ordered = []
-    var priorities = ["codex", "claude"]
+    var priorities = ["codex", "opencode-go", "claude"]
 
     for (var p = 0; p < priorities.length; p++) {
       for (var i = 0; i < source.length; i++) {
@@ -258,6 +259,27 @@ Item {
       agentsWidget.refreshNow()
     else
       usageFiles.refreshNow()
+    root.refreshOpenCodeGo()
+  }
+
+  // Omarchy ships no OpenCode Go collector yet, so the hub runs its own and
+  // writes straight into the shared usage directory. Both the live
+  // omarchy.agents widget and the usageFiles fallback discover records there
+  // by listing the directory, not by a fixed provider list. The new file
+  // needs no registration, only a nudge to be picked up once it lands,
+  // which reuses whichever refresh path is already active.
+  readonly property string opencodeGoScript: decodeURIComponent(
+    String(Qt.resolvedUrl("tools/omarchy-agent-usage-opencode-go")).replace(/^file:\/\//, ""))
+  property bool opencodeGoPending: false
+
+  function refreshOpenCodeGo() {
+    if (opencodeGoProcess.running) {
+      opencodeGoPending = true
+      return
+    }
+    opencodeGoPending = false
+    opencodeGoProcess.command = [root.opencodeGoScript]
+    opencodeGoProcess.running = true
   }
 
   function launchAgent() {
@@ -271,6 +293,7 @@ Item {
     root.nowMs = Date.now()
     if (usingLiveWidget && typeof agentsWidget.refreshLimits === "function")
       agentsWidget.refreshLimits()
+    root.refreshOpenCodeGo()
     Qt.callLater(function() {
       agentScroll.contentY = agentScroll.originY
     })
@@ -280,6 +303,23 @@ Item {
     id: usageFiles
     panelOpen: root.panelOpen
     watchFiles: !root.usingLiveWidget
+  }
+
+  Process {
+    id: opencodeGoProcess
+    running: false
+    onExited: {
+      if (root.opencodeGoPending) {
+        root.refreshOpenCodeGo()
+        return
+      }
+      // Nudge whichever usage source is live so the record just written
+      // shows up now instead of waiting for the next unrelated refresh.
+      if (root.usingLiveWidget && typeof agentsWidget.refreshLimits === "function")
+        agentsWidget.refreshLimits()
+      else
+        usageFiles.refreshLimits()
+    }
   }
 
   Timer {
@@ -361,7 +401,7 @@ Item {
             required property var modelData
             required property int index
             width: providerSwitch.cellWidth
-            iconText: index < 2 ? String(index + 1) : ""
+            iconText: index < 9 ? String(index + 1) : ""
             text: modelData.providerName
             selected: root.provider !== null
               && String(modelData.providerId || "") === String(root.provider.providerId || "")

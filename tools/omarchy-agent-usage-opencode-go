@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# Print an OpenCode Go plan-quota usage record as JSON, matching the shape
+# omarchy-agent-usage-update's per-agent collectors write into
+# ~/.local/state/omarchy/agents/usage/. Omarchy ships no collector for Go
+# yet, so clock-hub runs this one itself and writes straight into that same
+# directory; AgentsHub.qml and the mounted omarchy.agents widget both
+# discover records there by listing the directory, not by a fixed provider
+# list, so the file needs no further registration to be picked up.
+#
+# Quota comes from https://opencode.ai/zen/go/v1/usage, the same endpoint
+# the OpenCode console and TUI plugins use for the Go plan's rolling 5-hour,
+# weekly, and monthly usage windows.
+set -euo pipefail
+
+AGENT_ID="opencode-go"
+AGENT_NAME="OpenCode Go"
+AUTH_HELP='Run `opencode auth login -p opencode-go` or set OPENCODE_API_KEY.'
+USAGE_URL="https://opencode.ai/zen/go/v1/usage"
+
+usage_dir="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/agents/usage"
+auth_path="${XDG_DATA_HOME:-$HOME/.local/share}/opencode/auth.json"
+
+now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+base_record() {
+  jq -n \
+    --arg id "$AGENT_ID" \
+    --arg name "$AGENT_NAME" \
+    --arg updatedAt "$(now)" \
+    --arg statusText "$1" \
+    --arg authHelp "$2" \
+    '{
+      schemaVersion: 1, id: $id, name: $name, updatedAt: $updatedAt,
+      ready: false, hasLocalStats: false, scope: "account", hasPromptStats: false,
+      tierLabel: "Go", usageStatusText: $statusText, authHelpText: $authHelp,
+      limits: [], todayPrompts: 0, todaySessions: 0, todayTotalTokens: 0,
+      todayTokensByModel: {}, recentDays: [], totalPrompts: 0, totalSessions: 0,
+      activeDays: 0, activeDates: [], modelUsage: {}
+    }'
+}
+
+write_record() {
+  mkdir -p "$usage_dir"
+  local tmp
+  tmp=$(mktemp "$usage_dir/.$AGENT_ID.XXXXXX")
+  printf '%s\n' "$1" >"$tmp"
+  mv "$tmp" "$usage_dir/$AGENT_ID.json"
+}
+
+fail() {
+  write_record "$(base_record "$1" "$2")"
+  exit 0
+}
+
+# The usage endpoint accepts any workspace key: a dedicated Go key first,
+# then the Zen key opencode already stores for the free tier.
+resolve_key() {
+  if [[ -n "${OPENCODE_API_KEY:-}" ]]; then
+    printf '%s' "$OPENCODE_API_KEY"
+    return
+  fi
+  [[ -f "$auth_path" ]] || return 0
+  local key
+  key=$(jq -r '."opencode-go".key // empty' "$auth_path" 2>/dev/null || true)
+  if [[ -z "$key" ]]; then
+    key=$(jq -r '.opencode.key // empty' "$auth_path" 2>/dev/null || true)
+  fi
+  printf '%s' "$key"
+}
+
+api_key=$(resolve_key)
+[[ -n "$api_key" ]] || fail "OpenCode Go unavailable" "$AUTH_HELP"
+
+tmp_body=$(mktemp)
+trap 'rm -f "$tmp_body"' EXIT
+
+http_code=$(curl -sS -m 15 -o "$tmp_body" -w '%{http_code}' \
+  -H "Authorization: Bearer $api_key" "$USAGE_URL" 2>/dev/null) || http_code="000"
+
+if [[ "$http_code" != "200" ]] || ! jq -e . >/dev/null 2>&1 "$tmp_body"; then
+  status_text="OpenCode Go unavailable"
+  [[ "$http_code" == "401" || "$http_code" == "403" ]] && status_text="OpenCode Go key rejected"
+  fail "$status_text" "$AUTH_HELP"
+fi
+
+# Percent is the server's own "used" fraction (0-100); label text mirrors
+# Claude's and Codex's records so Model.js's window-title mapping (which goes
+# by keyword, not by agent) renders the same "Session / Weekly / Monthly"
+# titles here.
+limits=$(jq -c '
+  (.usage // {}) as $u
+  | [
+      {src: $u.rolling, label: "Session (5-hour)"},
+      {src: $u.weekly,  label: "Weekly (7-day)"},
+      {src: $u.monthly, label: "Monthly"}
+    ]
+  | map(select(.src.percent != null))
+  | map({label, percent: (.src.percent / 100), resetsAt: (.src.resetsAt // "")})
+' "$tmp_body") || limits="[]"
+
+record=$(jq -n \
+  --arg id "$AGENT_ID" \
+  --arg name "$AGENT_NAME" \
+  --arg updatedAt "$(now)" \
+  --argjson limits "$limits" \
+  '{
+    schemaVersion: 1, id: $id, name: $name, updatedAt: $updatedAt,
+    ready: true, hasLocalStats: false, scope: "account", hasPromptStats: false,
+    tierLabel: "Go", usageStatusText: "", authHelpText: "",
+    limits: $limits, todayPrompts: 0, todaySessions: 0, todayTotalTokens: 0,
+    todayTokensByModel: {}, recentDays: [], totalPrompts: 0, totalSessions: 0,
+    activeDays: 0, activeDates: [], modelUsage: {}
+  }')
+
+write_record "$record"

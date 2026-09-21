@@ -12,7 +12,7 @@ a compact desktop hub.
 - Full Omarchy calendar with week numbers, month navigation, and optional read-only Google Calendar events
 - Year progress above the calendar, with an optional life-progress bar
 - MPRIS media carousel: one card per running source, each with its own artwork, progress, and playback controls
-- Omarchy Agents dashboard with provider limits, reset countdowns, daily usage, and model totals
+- Omarchy Agents dashboard with provider limits, reset countdowns, daily usage, and model totals, including OpenCode Go plan quota via a bundled collector
 - Live CPU, memory, and root-disk status with a btop shortcut
 - Theme-aware progress fills, with stock Omarchy styling for readable model rows
 - Manifest-backed toggles for Media, Agents, System Status, and Google Calendar
@@ -26,11 +26,19 @@ JSON files that widget already writes. Opening the hub asks
 `omarchy-agent-usage-update --limits-only` for a fresh session window. It does
 not scan transcripts itself.
 
+Omarchy ships no usage collector for OpenCode Go, so the hub runs its own
+(`tools/omarchy-agent-usage-opencode-go`) and writes into the same usage
+directory the other collectors use. It picks up the API key opencode already
+stores (`opencode auth login -p opencode-go`, or `OPENCODE_API_KEY`) and shows
+the plan's rolling 5-hour, weekly, and monthly quota next to the other
+providers, whether or not `omarchy.agents` is mounted.
+
 ## Requirements
 
 - Omarchy 4.0 or newer
 - The stock `omarchy.media` service when the Media section is enabled
 - Agent usage JSON under `~/.local/state/omarchy/agents/usage` (written by `omarchy-agent-usage-update`)
+- `curl` and `jq` for the bundled OpenCode Go usage collector; an OpenCode Go subscription is optional
 - `bash`, `awk`, `df`, and the Linux `/proc` filesystem when System Status is enabled
 - `python3` and `secret-tool` when Google Calendar is enabled
 
@@ -118,7 +126,7 @@ With the hub focused:
 - `t` or Enter: jump to today
 - `w`: toggle week start
 - `s`: open hub settings
-- `1` / `2`: select the first or second agent provider
+- `1`-`9`: select the matching agent provider tab, in hub order (Codex, OpenCode Go, Claude, then any others)
 
 Day selection follows the date across month and year boundaries. Mouse wheel
 over the grid steps by month.

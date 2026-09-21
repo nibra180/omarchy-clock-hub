@@ -4,8 +4,14 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- OpenCode Go plan quota in the Agents dashboard, via a bundled collector (`tools/omarchy-agent-usage-opencode-go`) that fills the gap left by Omarchy's own collectors.
+- An OpenCode provider mark for the Agents dashboard.
+
 ### Changed
 
+- Agent tabs now keep a fixed order: Codex, OpenCode Go, Claude, then any others. Number-key provider switching covers every tab in that order instead of stopping at the first two.
 - Media now reads Quickshell MPRIS when Omarchy withholds `omarchy.media` from this bar-widget clone, so Chromium YouTube Music appears in the hub.
 - Agent provider buttons and the media carousel now show their keyboard shortcuts, with extra space below the media controls.
 - Close now uses the bar's hover-reveal setter instead of writing the readonly flag, so the hub can dismiss again.

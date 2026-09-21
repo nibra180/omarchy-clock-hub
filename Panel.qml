@@ -412,7 +412,7 @@ Panel {
         else if (t === "t" || t === "T") root.goToToday()
         else if (t === "w" || t === "W") root.toggleWeekStart()
         else if (t === "s" || t === "S") root.openQuickSettings()
-        else if ((t === "1" || t === "2") && root.showAgents)
+        else if (/^[1-9]$/.test(t) && root.showAgents)
           agentsHub.selectProviderAt(Number(t) - 1)
         else if ((t === "n" || t === "N") && root.showMedia) mediaHub.stepSource(1)
         else if ((t === "p" || t === "P") && root.showMedia) mediaHub.stepSource(-1)
