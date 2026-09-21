@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "Model.js" as Model
@@ -41,7 +42,12 @@ BarWidget {
   readonly property var mediaService: root.showMedia && bar && bar.shell
     ? bar.shell.firstPartyServiceFor("omarchy.media")
     : null
-  readonly property var activePlayer: mediaService ? mediaService.activePlayer : null
+  readonly property var mprisPlayers: Mpris.players ? Mpris.players.values : []
+  readonly property var activePlayer: {
+    if (!root.showMedia) return null
+    if (mediaService && mediaService.activePlayer) return mediaService.activePlayer
+    return Model.firstActiveMediaPlayer(mprisPlayers)
+  }
   readonly property bool mediaPlaying: activePlayer !== null && activePlayer.isPlaying
   readonly property string mediaTitle: activePlayer ? (activePlayer.trackTitle || "Media") : ""
   readonly property string mediaArtist: activePlayer ? (activePlayer.trackArtist || "") : ""

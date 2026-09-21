@@ -1,12 +1,14 @@
 import QtQuick
 import Quickshell.Io
+import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "Model.js" as Model
 
 // Now-playing section of the clock hub. Playback comes from Omarchy's MPRIS
-// service, so this component only owns presentation and which source is in
-// view.
+// service when the host exposes it. Bar-widget clones do not get that
+// proxy, so this component reads the same Quickshell Mpris list the service
+// uses.
 //
 // With more than one source the card becomes a carousel: one card per player,
 // arrows and dots to move between them, and transport buttons that address
@@ -22,19 +24,17 @@ Item {
 
   signal closeRequested()
 
-  readonly property var activePlayer: mediaService ? mediaService.activePlayer : null
+  readonly property var mprisPlayers: Mpris.players ? Mpris.players.values : []
+  readonly property var hostPlayers: mediaService ? mediaService.sourcePlayers : mprisPlayers
+  readonly property var activePlayer: mediaService && mediaService.activePlayer
+    ? mediaService.activePlayer
+    : Model.firstActiveMediaPlayer(mprisPlayers)
   // Ordered by player key, not by the service's playing-first order: pausing
   // a source must not move its card or shift the dots.
-  // sourcePlayers comes through Omarchy's plugin proxy, which only forwards
-  // the list when Array.isArray succeeds. QML player lists often fail that
-  // check, so a playing Chromium/YouTube Music session would vanish here
-  // while the bar still sees activePlayer.
-  readonly property var sources: mediaService
-    ? Model.orderedMediaSources(
-        mediaService.sourcePlayers,
-        function(player) { return mediaService.playerKey(player) },
-        mediaService.activePlayer)
-    : []
+  readonly property var sources: Model.orderedMediaSources(
+    root.hostPlayers,
+    function(player) { return root.playerKey(player) },
+    root.activePlayer)
   readonly property bool hasMultipleSources: sources.length > 1
 
   // The service honors its own preferredPlayerKey only while that player is
@@ -58,26 +58,62 @@ Item {
   implicitWidth: Style.space(270)
   implicitHeight: mediaColumn.implicitHeight
 
+  function playerKey(player) {
+    if (mediaService && typeof mediaService.playerKey === "function") {
+      var key = mediaService.playerKey(player)
+      if (key) return key
+    }
+    return Model.mediaPlayerKey(player)
+  }
+
   function indexOfKey(key) {
-    if (!mediaService || !key) return -1
+    if (!key) return -1
     for (var i = 0; i < sources.length; i++) {
-      if (mediaService.playerKey(sources[i]) === key) return i
+      if (root.playerKey(sources[i]) === key) return i
     }
     return -1
   }
 
   function indexOfPlayer(player) {
-    return mediaService && player ? indexOfKey(mediaService.playerKey(player)) : -1
+    return player ? indexOfKey(root.playerKey(player)) : -1
   }
 
   function focusSource(index) {
-    if (!mediaService || index < 0 || index >= sources.length) return
+    if (index < 0 || index >= sources.length) return
 
     var player = sources[index]
     if (!player) return
 
-    focusedKey = mediaService.playerKey(player)
+    focusedKey = root.playerKey(player)
     syncPosition()
+  }
+
+  function runLocalAction(player, action) {
+    if (!player) return false
+    if (action === "playPause") {
+      if (player.canTogglePlaying) {
+        player.togglePlaying()
+        return true
+      }
+      if (player.isPlaying && player.canPause) {
+        player.pause()
+        return true
+      }
+      if (!player.isPlaying && player.canPlay) {
+        player.play()
+        return true
+      }
+      return false
+    }
+    if (action === "next" && player.canGoNext) {
+      player.next()
+      return true
+    }
+    if (action === "previous" && player.canGoPrevious) {
+      player.previous()
+      return true
+    }
+    return false
   }
 
   // Every transport action goes through here, from the card buttons and from
@@ -85,13 +121,15 @@ Item {
   // service's active-player role, and an unpinned hub would follow that to
   // another card.
   function runActionOn(index, action) {
-    if (!mediaService || index < 0 || index >= sources.length) return false
+    if (index < 0 || index >= sources.length) return false
 
     var player = sources[index]
     if (!player) return false
 
-    focusedKey = mediaService.playerKey(player)
-    var handled = mediaService.runAction(action, false, focusedKey)
+    focusedKey = root.playerKey(player)
+    var handled = mediaService
+      ? mediaService.runAction(action, false, focusedKey)
+      : root.runLocalAction(player, action)
     if (handled && (action === "next" || action === "previous")) trackPosition = 0
     return handled
   }

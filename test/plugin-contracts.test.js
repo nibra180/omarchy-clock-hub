@@ -58,6 +58,7 @@ test("hub reuses mounted media and agents providers", () => {
   const usage = read("AgentsUsage.qml");
 
   assert.match(barWidget, /firstPartyServiceFor\("omarchy\.media"\)/);
+  assert.match(barWidget, /import Quickshell\.Services\.Mpris/);
   assert.match(panel, /firstPartyServiceFor\("omarchy\.media"\)/);
   assert.match(panel, /moduleWidgets\("omarchy\.agents"\)/);
   assert.match(hub, /AgentsUsage\s*{/);
@@ -250,6 +251,8 @@ test("the media carousel reuses the MPRIS service for every source", () => {
   // One card per source, addressed by key rather than by the service's own
   // notion of an active player.
   assert.match(hub, /mediaService\.sourcePlayers/);
+  assert.match(hub, /import Quickshell\.Services\.Mpris/);
+  assert.match(hub, /Mpris\.players/);
   assert.match(hub, /model:\s*root\.sources/);
   assert.match(hub, /orientation:\s*ListView\.Horizontal/);
   assert.match(hub, /snapMode:\s*ListView\.SnapOneItem/);
@@ -263,22 +266,22 @@ test("the media carousel reuses the MPRIS service for every source", () => {
   // Browsing stays local to the hub and never moves playback or changes the
   // media service's preferred player.
   assert.doesNotMatch(hub, /mediaService\.selectPlayer/);
-  assert.doesNotMatch(hub, /switchSource|\.play\(\)|\.pause\(\)/);
+  assert.doesNotMatch(hub, /switchSource/);
 
   // Pausing a card must not move it. The order ignores playback state, every
   // action pins the card it acted on, and a model rebuild restores the view
   // without animating.
   assert.match(
     hub,
-    /Model\.orderedMediaSources\(\s*mediaService\.sourcePlayers[\s\S]*?mediaService\.activePlayer/,
+    /Model\.orderedMediaSources\(\s*root\.hostPlayers,\s*function\(player\) \{ return root\.playerKey\(player\) \},\s*root\.activePlayer/,
   );
   assert.match(
     hub,
-    /function runActionOn\(index, action\)[\s\S]*?focusedKey = mediaService\.playerKey\(player\)[\s\S]*?mediaService\.runAction/,
+    /function runActionOn\(index, action\)[\s\S]*?focusedKey = root\.playerKey\(player\)[\s\S]*?mediaService\.runAction/,
   );
   assert.match(
     hub,
-    /var handled = mediaService\.runAction\(action, false, focusedKey\)/,
+    /var handled = mediaService\s*\n\s*\? mediaService\.runAction\(action, false, focusedKey\)/,
   );
   assert.match(
     hub,

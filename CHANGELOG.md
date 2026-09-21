@@ -6,7 +6,7 @@ All notable changes to Omarchy Clock Hub are documented here.
 
 ### Changed
 
-- The media card still shows the playing source when Omarchy's plugin proxy withholds the MPRIS source list, including Chromium YouTube Music.
+- Media now reads Quickshell MPRIS when Omarchy withholds `omarchy.media` from this bar-widget clone, so Chromium YouTube Music appears in the hub.
 - Agent provider buttons and the media carousel now show their keyboard shortcuts, with extra space below the media controls.
 - Close now uses the bar's hover-reveal setter instead of writing the readonly flag, so the hub can dismiss again.
 - Agent usage falls back to Omarchy's usage JSON files when the bar no longer hands over `omarchy.agents`, and opening the hub refreshes session limit windows.

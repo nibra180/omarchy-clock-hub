@@ -579,9 +579,10 @@ test("media sources fall back to the active player when the host list is empty",
   assert.deepEqual(Model.orderedMediaSources([], keyOf, chromium).map(keyOf), [
     chromium.dbusName,
   ]);
-  assert.deepEqual(Model.orderedMediaSources(null, keyOf, chromium).map(keyOf), [
-    chromium.dbusName,
-  ]);
+  assert.deepEqual(
+    Model.orderedMediaSources(null, keyOf, chromium).map(keyOf),
+    [chromium.dbusName],
+  );
   assert.deepEqual(
     Model.orderedMediaSources([chromium], keyOf, chromium).map(keyOf),
     [chromium.dbusName],
@@ -589,6 +590,26 @@ test("media sources fall back to the active player when the host list is empty",
   assert.deepEqual(Model.collectMediaPlayers({ 0: chromium, length: 1 }), [
     chromium,
   ]);
+  assert.deepEqual(
+    Model.firstActiveMediaPlayer([
+      mprisPlayer({ dbusName: "paused", identity: "VLC", isPlaying: false }),
+      { ...chromium, isPlaying: true },
+    ]).dbusName,
+    chromium.dbusName,
+  );
+  assert.equal(
+    Model.mediaPlayerKey(chromium),
+    "org.mpris.MediaPlayer2.chromium.instance4070009",
+  );
+  assert.deepEqual(
+    Model.collectMediaPlayers([
+      mprisPlayer({
+        dbusName: "org.mpris.MediaPlayer2.playerctld",
+        identity: "Playerctl",
+      }),
+    ]),
+    [],
+  );
 });
 
 test("media source details never repeat the label", () => {

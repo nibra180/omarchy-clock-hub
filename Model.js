@@ -564,6 +564,31 @@ function stepDay(year, month, day, delta) {
 // Stable carousel order. The service sorts playing sources to the front, so
 // pausing one moves it and shifts every index behind it. Ordering by player
 // key instead keeps each source in the slot it had, for as long as it exists.
+function isMediaProxyPlayer(player) {
+  var dbusName = String((player && player.dbusName) || "").toLowerCase();
+  var desktopEntry = String(
+    (player && player.desktopEntry) || "",
+  ).toLowerCase();
+  return dbusName.indexOf("playerctld") !== -1 || desktopEntry === "playerctld";
+}
+
+function hasMediaMetadata(player) {
+  return !!(
+    player &&
+    (player.trackTitle ||
+      player.trackArtist ||
+      player.identity ||
+      player.desktopEntry)
+  );
+}
+
+function mediaPlayerKey(player) {
+  if (!player) return "";
+  return String(
+    player.dbusName || player.desktopEntry || player.identity || "",
+  );
+}
+
 function collectMediaPlayers(players) {
   var list = [];
   if (
@@ -575,17 +600,31 @@ function collectMediaPlayers(players) {
   }
 
   for (var i = 0; i < players.length; i++) {
-    if (players[i]) list.push(players[i]);
+    var player = players[i];
+    if (!player || isMediaProxyPlayer(player) || !hasMediaMetadata(player))
+      continue;
+    list.push(player);
   }
 
   return list;
+}
+
+function firstActiveMediaPlayer(players) {
+  var list = collectMediaPlayers(players);
+  var fallback = list.length > 0 ? list[0] : null;
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].isPlaying) return list[i];
+  }
+  return fallback;
 }
 
 function orderedMediaSources(players, keyOf, activePlayer) {
   var list = collectMediaPlayers(players);
   // The plugin proxy can hand over an empty list while still exposing the
   // source that is playing. Keep that one so a lone session still appears.
-  if (list.length === 0 && activePlayer) list.push(activePlayer);
+  if (list.length === 0 && activePlayer && !isMediaProxyPlayer(activePlayer)) {
+    list.push(activePlayer);
+  }
 
   if (typeof keyOf !== "function") return list;
 
@@ -811,7 +850,11 @@ if (typeof module !== "undefined") {
     clockFormatRing: clockFormatRing,
     nextClockFormat: nextClockFormat,
     isoWeekLiteral: isoWeekLiteral,
+    isMediaProxyPlayer: isMediaProxyPlayer,
+    hasMediaMetadata: hasMediaMetadata,
+    mediaPlayerKey: mediaPlayerKey,
     collectMediaPlayers: collectMediaPlayers,
+    firstActiveMediaPlayer: firstActiveMediaPlayer,
     orderedMediaSources: orderedMediaSources,
     mediaSourceApp: mediaSourceApp,
     mediaSourceLabel: mediaSourceLabel,

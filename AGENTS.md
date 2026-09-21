@@ -23,9 +23,11 @@ system status. The repository has no package manager or build step.
   and IPC target `omarchy.clock` unless a migration is part of the task.
 - Preserve `open()`, `close()`, `opened`, and popout handoff behavior on the bar
   widget. Omarchy uses that shape to route panel and IPC actions.
-- Reuse the running `omarchy.media` service. Prefer the mounted `omarchy.agents`
-  widget for usage, and read its usage JSON files when that widget is not
-  exposed. Do not add a second transcript scanner or background poller.
+- Reuse the running `omarchy.media` service when the host exposes it. Bar-widget
+  clones do not receive that proxy; then read `Quickshell.Services.Mpris` the
+  same way the media service does. Prefer the mounted `omarchy.agents` widget
+  for usage, and read its usage JSON files when that widget is not exposed. Do
+  not add a second transcript scanner or background poller.
 - Treat injected `bar`, service, player, and agents objects as optional. The UI
   must still instantiate when one is unavailable.
 - Keep reusable date and format calculations in `Model.js`. It must remain free
